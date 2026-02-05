@@ -288,11 +288,10 @@ export default function Studio() {
                <label className="block text-xs font-mono uppercase text-muted-foreground tracking-wider">Festive Stickers</label>
                <div className="grid grid-cols-3 gap-3">
                  {[
-                   { id: 'lny-1', icon: '/assets/images/IMG_4579_2_1770275686839.jpg', premium: false },
-                   { id: 'lny-2', icon: '/assets/images/IMG_4579_1770275686840.jpg', premium: false },
-                   { id: 'lny-3', icon: '/assets/images/IMG_4580_2_1770275686841.jpg', premium: false },
-                   { id: 'lny-4', icon: '/assets/images/IMG_4580_3_1770275686841.jpg', premium: false },
-                   { id: 'lny-5', icon: '/assets/images/IMG_4580_1770275686841.jpg', premium: false },
+                   { id: 'lny-stamp-1', icon: '/assets/stickers/lny-stamp-1.png', premium: false },
+                   { id: 'lny-stamp-2', icon: '/assets/stickers/lny-stamp-2.jpg', premium: false },
+                   { id: 'lny-stamp-3', icon: '/assets/stickers/lny-stamp-3.jpeg', premium: false },
+                   { id: 'lny-horses', icon: '/assets/stickers/lny-horses.png', premium: false },
                    { id: 'heart', icon: '❤️', premium: false },
                    { id: 'star', icon: '⭐', premium: false },
                  ].map((s) => (

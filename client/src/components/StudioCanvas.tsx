@@ -133,10 +133,7 @@ export function StudioCanvas({ background, content, onUpdateElement }: StudioCan
 
         {/* Render Stickers */}
         {content.stickers.map((el) => {
-          let stickerContent = "⭐";
-          if (el.stickerId === 'heart') stickerContent = "❤️";
-          if (el.stickerId === 'moon') stickerContent = "🌙";
-          if (el.stickerId === 'flower') stickerContent = "🌸";
+          const stickerContent = el.stickerId;
           
           return (
             <DraggableElement 
