@@ -6,26 +6,23 @@
 
 :root {
   --background: 40 33% 98%; /* Cream/Paper white */
-  --foreground: 224 35% 20%; /* Midnight Blue text */
+  --foreground: 348 83% 47%; /* Festive Red */
   
-  --primary: 224 35% 25%; /* Midnight Blue */
-  --primary-foreground: 40 33% 98%;
+  --primary: 348 83% 47%; /* Festive Red */
+  --primary-foreground: 48 100% 50%; /* Gold */
   
-  --secondary: 15 30% 94%; /* Blush/Rose tint */
-  --secondary-foreground: 224 35% 25%;
+  --secondary: 48 100% 50%; /* Golden yellow */
+  --secondary-foreground: 348 83% 20%;
   
-  --muted: 40 10% 94%;
-  --muted-foreground: 224 15% 45%;
+  --muted: 348 30% 95%;
+  --muted-foreground: 348 50% 40%;
   
-  --accent: 340 40% 90%; /* Soft Pink accent */
-  --accent-foreground: 224 35% 25%;
+  --accent: 45 92% 60%; /* Bright Gold */
+  --accent-foreground: 348 83% 20%;
   
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-
-  --border: 224 15% 85%;
-  --input: 224 15% 85%;
-  --ring: 224 35% 25%;
+  --border: 348 83% 85%;
+  --input: 348 83% 85%;
+  --ring: 348 83% 47%;
   
   --radius: 0.75rem;
 }

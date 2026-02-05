@@ -15,6 +15,8 @@ interface ElementProps {
 }
 
 const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onUpdate }: ElementProps) => {
+  const [isEditing, setIsEditing] = (type === "text") ? [true, () => {}] : [false, () => {}]; // Simplified for placeholder
+
   return (
     <motion.div
       drag
@@ -22,18 +24,37 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
       initial={{ x, y, rotate: rotation, scale }}
       className="absolute cursor-move touch-none"
       onDragEnd={(_, info) => {
-        // In a real app, calculate new X/Y relative to container
-        // onUpdate(id, { x: info.point.x, y: info.point.y });
+        const container = document.getElementById('canvas-container');
+        if (container) {
+          const rect = container.getBoundingClientRect();
+          onUpdate(id, { 
+            x: info.point.x - rect.left, 
+            y: info.point.y - rect.top 
+          });
+        }
       }}
     >
       {type === "text" && (
-        <div className={cn("px-2 py-1 min-w-[100px] outline-none", style?.font || "font-hand")} 
-             style={{ color: style?.color, fontSize: style?.fontSize }}>
+        <div 
+          contentEditable
+          suppressContentEditableWarning
+          className={cn("px-2 py-1 min-w-[100px] outline-none focus:ring-2 ring-primary/20 rounded", style?.font || "font-hand")} 
+          style={{ color: style?.color, fontSize: style?.fontSize }}
+          onBlur={(e) => onUpdate(id, { text: e.currentTarget.textContent })}
+        >
           {content}
         </div>
       )}
       {type === "sticker" && (
         <div className="text-4xl drop-shadow-md filter">{content}</div>
+      )}
+      {type === "image" && (
+        <img 
+          src={content} 
+          alt="User content" 
+          className="max-w-[200px] h-auto rounded-sm shadow-md"
+          draggable={false}
+        />
       )}
     </motion.div>
   );
@@ -64,6 +85,7 @@ export function StudioCanvas({ background, content, onUpdateElement }: StudioCan
   return (
     <div className="w-full h-full flex items-center justify-center p-4 sm:p-8 bg-muted/20">
       <div 
+        id="canvas-container"
         ref={containerRef}
         className={cn(
           "aspect-[5/7] h-full max-h-[80vh] w-auto shadow-2xl relative overflow-hidden transition-all duration-500 rounded-sm",
@@ -79,6 +101,17 @@ export function StudioCanvas({ background, content, onUpdateElement }: StudioCan
             content={el.text} 
             style={{ font: el.font, color: el.color, fontSize: el.fontSize }}
             onUpdate={(id, data) => onUpdateElement('text', id, data)} 
+          />
+        ))}
+
+        {/* Render Images */}
+        {content.images?.map((el) => (
+          <DraggableElement 
+            key={el.id} 
+            {...el} 
+            type="image" 
+            content={el.url}
+            onUpdate={(id, data) => onUpdateElement('image', id, data)} 
           />
         ))}
 

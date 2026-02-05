@@ -89,8 +89,23 @@ export default function Studio() {
   };
 
   const handleUpdateElement = (type: string, id: string, data: any) => {
-    // In a real app, update state here
-    console.log("Update", type, id, data);
+    setLetterState(prev => {
+      const content = { ...prev.content };
+      if (type === 'text') {
+        content.textElements = content.textElements.map(el => 
+          el.id === id ? { ...el, ...data } : el
+        );
+      } else if (type === 'sticker') {
+        content.stickers = content.stickers.map(el => 
+          el.id === id ? { ...el, ...data } : el
+        );
+      } else if (type === 'image') {
+        content.images = content.images.map(el => 
+          el.id === id ? { ...el, ...data } : el
+        );
+      }
+      return { ...prev, content };
+    });
   };
 
   const handleSend = async () => {
@@ -218,6 +233,45 @@ export default function Studio() {
               >
                 <Type size={18} /> Add Text Block
               </button>
+              
+              <div className="h-px bg-border w-full" />
+              
+              <label className="block text-xs font-mono uppercase text-muted-foreground tracking-wider">Images</label>
+              <div 
+                className="w-full py-8 border-2 border-dashed border-border rounded-xl text-muted-foreground flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-muted/30"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const url = event.target?.result as string;
+                      setLetterState(prev => ({
+                        ...prev,
+                        content: {
+                          ...prev.content,
+                          images: [
+                            ...prev.content.images,
+                            { 
+                              id: Math.random().toString(36).substr(2, 9), 
+                              url, 
+                              x: 50, 
+                              y: 50, 
+                              rotation: 0, 
+                              scale: 1 
+                            }
+                          ] as any[]
+                        }
+                      }));
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              >
+                <Palette size={24} />
+                <span className="text-sm">Drop image here to add</span>
+              </div>
             </div>
           )}
 

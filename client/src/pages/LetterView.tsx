@@ -69,10 +69,10 @@ export default function LetterView() {
             transition={{ type: "spring", damping: 20, stiffness: 100, delay: 0.2 }}
             className="w-full max-w-xl h-[80vh] relative perspective-1000"
           >
-             <div className="w-full h-full transform transition-transform duration-1000 preserve-3d">
+            <div className="w-full h-full transform transition-transform duration-1000 preserve-3d">
                 <StudioCanvas 
-                  background={letter.content.content.background}
-                  content={letter.content.content}
+                  background={letter.content.background}
+                  content={letter.content}
                   onUpdateElement={() => {}} // Read only
                 />
              </div>
