@@ -112,7 +112,7 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
         x, 
         y,
         rotate: rotation,
-        transformOrigin: 'center center'
+        transformOrigin: 'top left'
       }}
       onClick={handleClick}
       onDragStart={() => setIsDragging(true)}
@@ -123,11 +123,18 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
         const container = document.getElementById('canvas-inner');
         if (container) {
           const rect = container.getBoundingClientRect();
-          const scale = rect.width / 900;
-          onUpdate(id, { 
-            x: (info.point.x - rect.left) / scale, 
-            y: (info.point.y - rect.top) / scale 
-          });
+          const canvasScaleVal = rect.width / 900;
+          // Calculate raw position
+          let newX = (info.point.x - rect.left) / canvasScaleVal;
+          let newY = (info.point.y - rect.top) / canvasScaleVal;
+          // Clamp to letter boundaries (24px inset from edges)
+          const minX = 24;
+          const minY = 24;
+          const maxX = 900 - 48; // Leave room for element
+          const maxY = 643 - 48;
+          newX = Math.max(minX, Math.min(maxX, newX));
+          newY = Math.max(minY, Math.min(maxY, newY));
+          onUpdate(id, { x: newX, y: newY });
         }
       }}
     >
@@ -228,19 +235,27 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
         </div>
       )}
       {type === "image" && (
-        <div className={cn(
-          "relative select-none",
-          isSelected && "ring-2 ring-primary ring-offset-2 rounded-sm"
-        )}>
+        <div 
+          className={cn(
+            "relative select-none",
+            isSelected && "outline outline-2 outline-primary outline-offset-2 rounded-sm"
+          )}
+          style={{
+            width: 200 * scale,
+            height: 'auto'
+          }}
+        >
+          {/* Image sized by width - wrapper grows with scale so controls follow */}
           <img 
             src={content} 
             alt="User content" 
-            className="max-w-[300px] h-auto rounded-sm shadow-md pointer-events-none"
-            style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+            className="w-full h-auto rounded-sm shadow-md pointer-events-none block"
             draggable={false}
           />
+          {/* Controls positioned at corners of the sized wrapper */}
           {!isReadOnly && isSelected && (
             <>
+              {/* Remove button */}
               <button 
                 onClick={(e) => {
                   e.stopPropagation();
@@ -252,6 +267,7 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
                 ×
               </button>
               
+              {/* Resize handle */}
               <div 
                 onPointerDown={(e) => {
                   e.stopPropagation();
@@ -266,11 +282,12 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
                 <div className="w-2 h-2 border-r-2 border-b-2 border-white" />
               </div>
               
+              {/* Scale buttons */}
               <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-1 z-10">
                 <button 
                   onClick={(e) => {
                     e.stopPropagation();
-                    onUpdate(id, { scale: Math.max(0.3, scale - 0.2) });
+                    onUpdate(id, { scale: Math.max(0.5, scale - 0.2) });
                   }}
                   className="w-6 h-6 bg-white shadow-md rounded-full flex items-center justify-center text-sm font-bold text-gray-700 hover:bg-gray-100"
                   data-testid="button-scale-down-image"
@@ -285,6 +302,7 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
                 >+</button>
               </div>
               
+              {/* Drag hint */}
               <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
                 Drag to move
               </div>
@@ -382,6 +400,19 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
             height: BASE_HEIGHT
           }}
         >
+          {/* Dotted border to define letter boundaries */}
+          <div 
+            className="absolute pointer-events-none z-40"
+            style={{
+              top: 24,
+              left: 24,
+              right: 24,
+              bottom: showFooter ? 100 : 24,
+              border: '2px dashed',
+              borderColor: 'rgba(0,0,0,0.15)',
+              borderRadius: 4
+            }}
+          />
           {/* Render Text */}
           {content.textElements.map((el) => (
             <DraggableElement 
