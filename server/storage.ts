@@ -1,38 +1,43 @@
-import { type User, type InsertUser } from "@shared/schema";
-import { randomUUID } from "crypto";
-
-// modify the interface with any CRUD methods
-// you might need
+import { letters, type InsertLetter, type Letter } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
+import { randomBytes } from "crypto";
 
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  createLetter(letter: InsertLetter): Promise<Letter>;
+  getLetter(id: number): Promise<Letter | undefined>;
+  getLetterByShareId(shareId: string): Promise<Letter | undefined>;
+  updateLetter(id: number, letter: Partial<InsertLetter>): Promise<Letter>;
 }
 
-export class MemStorage implements IStorage {
-  private users: Map<string, User>;
-
-  constructor() {
-    this.users = new Map();
+export class DatabaseStorage implements IStorage {
+  async createLetter(insertLetter: InsertLetter): Promise<Letter> {
+    const shareId = randomBytes(4).toString('hex'); // 8 char unique ID
+    const [letter] = await db
+      .insert(letters)
+      .values({ ...insertLetter, shareId })
+      .returning();
+    return letter;
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getLetter(id: number): Promise<Letter | undefined> {
+    const [letter] = await db.select().from(letters).where(eq(letters.id, id));
+    return letter;
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getLetterByShareId(shareId: string): Promise<Letter | undefined> {
+    const [letter] = await db.select().from(letters).where(eq(letters.shareId, shareId));
+    return letter;
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
-    const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+  async updateLetter(id: number, update: Partial<InsertLetter>): Promise<Letter> {
+    const [letter] = await db
+      .update(letters)
+      .set(update)
+      .where(eq(letters.id, id))
+      .returning();
+    return letter;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

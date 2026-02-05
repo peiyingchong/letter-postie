@@ -84,8 +84,9 @@ export default {
       },
       fontFamily: {
         sans: ["var(--font-sans)"],
-        serif: ["var(--font-serif)"],
-        mono: ["var(--font-mono)"],
+        serif: ["'Playfair Display'", "serif"],
+        mono: ["'Fira Code'", "monospace"],
+        hand: ["'Architects Daughter'", "cursive"],
       },
       keyframes: {
         "accordion-down": {

@@ -1,0 +1,105 @@
+import { useRef } from "react";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+interface ElementProps {
+  id: string;
+  x: number;
+  y: number;
+  rotation: number;
+  scale: number;
+  type: "text" | "image" | "sticker";
+  content: string;
+  style?: any;
+  onUpdate: (id: string, updates: any) => void;
+}
+
+const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onUpdate }: ElementProps) => {
+  return (
+    <motion.div
+      drag
+      dragMomentum={false}
+      initial={{ x, y, rotate: rotation, scale }}
+      className="absolute cursor-move touch-none"
+      onDragEnd={(_, info) => {
+        // In a real app, calculate new X/Y relative to container
+        // onUpdate(id, { x: info.point.x, y: info.point.y });
+      }}
+    >
+      {type === "text" && (
+        <div className={cn("px-2 py-1 min-w-[100px] outline-none", style?.font || "font-hand")} 
+             style={{ color: style?.color, fontSize: style?.fontSize }}>
+          {content}
+        </div>
+      )}
+      {type === "sticker" && (
+        <div className="text-4xl drop-shadow-md filter">{content}</div>
+      )}
+    </motion.div>
+  );
+};
+
+interface StudioCanvasProps {
+  background: string;
+  content: {
+    textElements: any[];
+    stickers: any[];
+    images: any[];
+  };
+  onUpdateElement: (type: string, id: string, data: any) => void;
+}
+
+export function StudioCanvas({ background, content, onUpdateElement }: StudioCanvasProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const getBgClass = (bg: string) => {
+    switch (bg) {
+      case 'crumpled-paper': return 'bg-pattern-crumpled';
+      case 'midnight-blue': return 'bg-pattern-midnight text-white';
+      case 'rose-petal': return 'bg-pattern-rose';
+      default: return 'bg-texture-paper bg-white';
+    }
+  };
+
+  return (
+    <div className="w-full h-full flex items-center justify-center p-4 sm:p-8 bg-muted/20">
+      <div 
+        ref={containerRef}
+        className={cn(
+          "aspect-[5/7] h-full max-h-[80vh] w-auto shadow-2xl relative overflow-hidden transition-all duration-500 rounded-sm",
+          getBgClass(background)
+        )}
+      >
+        {/* Render Text */}
+        {content.textElements.map((el) => (
+          <DraggableElement 
+            key={el.id} 
+            {...el} 
+            type="text" 
+            content={el.text} 
+            style={{ font: el.font, color: el.color, fontSize: el.fontSize }}
+            onUpdate={(id, data) => onUpdateElement('text', id, data)} 
+          />
+        ))}
+
+        {/* Render Stickers */}
+        {content.stickers.map((el) => {
+          let stickerContent = "⭐";
+          if (el.stickerId === 'heart') stickerContent = "❤️";
+          if (el.stickerId === 'moon') stickerContent = "🌙";
+          if (el.stickerId === 'flower') stickerContent = "🌸";
+          
+          return (
+            <DraggableElement 
+              key={el.id} 
+              {...el} 
+              type="sticker" 
+              content={stickerContent}
+              onUpdate={(id, data) => onUpdateElement('sticker', id, data)} 
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
