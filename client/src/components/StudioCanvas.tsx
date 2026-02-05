@@ -15,12 +15,15 @@ interface ElementProps {
   onUpdate: (id: string, updates: any) => void;
   onRemove: (id: string) => void;
   isReadOnly?: boolean;
+  isSelected?: boolean;
+  onSelect?: (id: string) => void;
 }
 
-const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onUpdate, onRemove, isReadOnly }: ElementProps) => {
+const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onUpdate, onRemove, isReadOnly, isSelected, onSelect }: ElementProps) => {
   const elementRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleResizeStart = useCallback((e: React.PointerEvent) => {
     if (isReadOnly) return;
@@ -84,21 +87,40 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
 
   const baseSize = type === "sticker" ? 64 : 36;
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (type === "image" && onSelect && !isReadOnly) {
+      e.stopPropagation();
+      onSelect(id);
+    }
+  };
+
+  // For images: only enable drag when already selected and actively dragging
+  const canDrag = !isReadOnly && !isResizing && !isRotating && (type !== "image" || (isSelected && isDragging));
+
   return (
     <motion.div
       ref={elementRef}
-      drag={!isReadOnly && !isResizing && !isRotating}
+      drag={canDrag}
       dragMomentum={false}
       initial={{ x, y }}
-      className={cn("absolute touch-none group", !isReadOnly && "cursor-move")}
+      className={cn(
+        "absolute touch-none",
+        !isReadOnly && type !== "image" && "cursor-move",
+        type === "image" && !isReadOnly && "cursor-pointer",
+        type === "image" && isSelected && "cursor-move"
+      )}
       style={{ 
         x, 
         y,
         rotate: rotation,
         transformOrigin: 'center center'
       }}
+      onClick={handleClick}
+      onDragStart={() => setIsDragging(true)}
       onDragEnd={(_, info) => {
+        setIsDragging(false);
         if (isReadOnly) return;
+        if (type === "image" && !isSelected) return;
         const container = document.getElementById('canvas-container');
         if (container) {
           const rect = container.getBoundingClientRect();
@@ -110,7 +132,7 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
       }}
     >
       {type === "text" && (
-        <div className="relative">
+        <div className="relative group">
           <div 
             contentEditable={!isReadOnly}
             suppressContentEditableWarning
@@ -133,7 +155,7 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
       )}
       {type === "sticker" && (
         <div 
-          className="drop-shadow-md filter select-none relative"
+          className="drop-shadow-md filter select-none relative group"
           style={{ 
             width: baseSize * scale, 
             height: baseSize * scale,
@@ -211,32 +233,69 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
         </div>
       )}
       {type === "image" && (
-        <div className="relative group/img">
+        <div className={cn(
+          "relative select-none",
+          isSelected && "ring-2 ring-primary ring-offset-2 rounded-sm"
+        )}>
           <img 
             src={content} 
             alt="User content" 
-            className="max-w-[300px] h-auto rounded-sm shadow-md"
+            className="max-w-[300px] h-auto rounded-sm shadow-md pointer-events-none"
             style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
             draggable={false}
           />
-          {!isReadOnly && (
+          {/* Controls only show when selected */}
+          {!isReadOnly && isSelected && (
             <>
               <button 
-                onClick={() => onRemove(id)}
-                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover/img:opacity-100 transition-opacity shadow-sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemove(id);
+                }}
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm shadow-md z-10 hover:bg-red-600 transition-colors"
                 data-testid="button-remove-image"
               >
                 ×
               </button>
-              <div className="absolute -bottom-6 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
-                 <button 
-                   onClick={() => onUpdate(id, { scale: Math.max(0.5, scale - 0.2) })}
-                   className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
-                 >-</button>
-                 <button 
-                   onClick={() => onUpdate(id, { scale: Math.min(3, scale + 0.2) })}
-                   className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
-                 >+</button>
+              
+              {/* Resize handle */}
+              <div 
+                onPointerDown={(e) => {
+                  e.stopPropagation();
+                  handleResizeStart(e);
+                }}
+                className={cn(
+                  "absolute -bottom-2 -right-2 w-5 h-5 bg-primary rounded-full cursor-se-resize shadow-md z-10 flex items-center justify-center hover:bg-primary/80 transition-colors",
+                  isResizing && "bg-primary/80"
+                )}
+                data-testid="handle-resize-image"
+              >
+                <div className="w-2 h-2 border-r-2 border-b-2 border-white" />
+              </div>
+              
+              {/* Scale buttons */}
+              <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-1 z-10">
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdate(id, { scale: Math.max(0.3, scale - 0.2) });
+                  }}
+                  className="w-6 h-6 bg-white shadow-md rounded-full flex items-center justify-center text-sm font-bold text-gray-700 hover:bg-gray-100"
+                  data-testid="button-scale-down-image"
+                >-</button>
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onUpdate(id, { scale: Math.min(3, scale + 0.2) });
+                  }}
+                  className="w-6 h-6 bg-white shadow-md rounded-full flex items-center justify-center text-sm font-bold text-gray-700 hover:bg-gray-100"
+                  data-testid="button-scale-up-image"
+                >+</button>
+              </div>
+              
+              {/* Drag hint */}
+              <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
+                Drag to move
               </div>
             </>
           )}
@@ -260,6 +319,7 @@ interface StudioCanvasProps {
 
 export function StudioCanvas({ background, content, onUpdateElement, onRemoveElement, isReadOnly }: StudioCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
 
   const getBgClass = (bg: string) => {
     switch (bg) {
@@ -274,6 +334,16 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
     if (onRemoveElement) {
       onRemoveElement(type, id);
     }
+    if (type === 'image' && id === selectedImageId) {
+      setSelectedImageId(null);
+    }
+  };
+
+  const handleCanvasClick = (e: React.MouseEvent) => {
+    // Only deselect if clicking directly on canvas background
+    if (e.target === e.currentTarget || (e.target as HTMLElement).id === 'canvas-container') {
+      setSelectedImageId(null);
+    }
   };
 
   return (
@@ -281,6 +351,7 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
       <div 
         id="canvas-container"
         ref={containerRef}
+        onClick={handleCanvasClick}
         className={cn(
           "aspect-[7/5] w-full max-w-[900px] h-auto shadow-2xl relative overflow-hidden transition-all duration-500 rounded-sm",
           getBgClass(background)
@@ -308,6 +379,8 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
             type="image" 
             content={el.url}
             isReadOnly={isReadOnly}
+            isSelected={selectedImageId === el.id}
+            onSelect={(id) => setSelectedImageId(id)}
             onUpdate={(id, data) => onUpdateElement('image', id, data)} 
             onRemove={(id) => handleRemove('image', id)}
           />
