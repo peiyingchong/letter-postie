@@ -132,11 +132,18 @@ export function StudioCanvas({ background, content, onUpdateElement, isReadOnly 
         )}
       >
         <div className="absolute top-4 right-4 z-10 w-24 h-24 flex items-center justify-center">
-           <img src="/assets/stickers/lny-stamp-1.png" className="w-full h-full object-contain absolute opacity-80" alt="Stamp" />
+           <div className="w-20 h-24 border-2 border-primary/40 rounded-sm relative flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px] overflow-hidden">
+             <div className="absolute inset-0 border-[6px] border-white/20 pointer-events-none" />
+             <div className="text-[8px] font-serif uppercase tracking-[0.2em] text-primary/60 mb-1">Postal</div>
+             <div className="w-10 h-10 rounded-full border border-primary/20 flex items-center justify-center">
+               <div className="text-xl font-serif text-primary/40 italic">L</div>
+             </div>
+             <div className="mt-2 text-[10px] font-bold text-primary/60 font-mono">2026</div>
+           </div>
            <div 
              contentEditable={!isReadOnly}
              suppressContentEditableWarning
-             className="text-[10px] font-hand text-center p-1 outline-none w-full z-10 text-primary-foreground/90 font-bold"
+             className="absolute inset-0 flex items-center justify-center text-[10px] font-hand text-center p-1 outline-none z-10 text-primary font-bold"
            >
              {isReadOnly ? "" : "STAMP"}
            </div>
