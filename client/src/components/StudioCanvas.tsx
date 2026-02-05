@@ -1,6 +1,7 @@
-import { useRef } from "react";
+import { useRef, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { RotateCw } from "lucide-react";
 
 interface ElementProps {
   id: string;
@@ -17,12 +18,85 @@ interface ElementProps {
 }
 
 const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onUpdate, onRemove, isReadOnly }: ElementProps) => {
+  const elementRef = useRef<HTMLDivElement>(null);
+  const [isResizing, setIsResizing] = useState(false);
+  const [isRotating, setIsRotating] = useState(false);
+
+  const handleResizeStart = useCallback((e: React.PointerEvent) => {
+    if (isReadOnly) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setIsResizing(true);
+    
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startScale = scale;
+    
+    const handleMove = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      const delta = Math.max(dx, dy);
+      const newScale = Math.max(0.3, Math.min(4, startScale + delta / 80));
+      onUpdate(id, { scale: newScale });
+    };
+    
+    const handleUp = () => {
+      setIsResizing(false);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+    
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }, [id, scale, onUpdate, isReadOnly]);
+
+  const handleRotateStart = useCallback((e: React.PointerEvent) => {
+    if (isReadOnly) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setIsRotating(true);
+    
+    const element = elementRef.current;
+    if (!element) return;
+    
+    const rect = element.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const startAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * (180 / Math.PI);
+    const startRotation = rotation;
+    
+    const handleMove = (moveEvent: PointerEvent) => {
+      const currentAngle = Math.atan2(moveEvent.clientY - centerY, moveEvent.clientX - centerX) * (180 / Math.PI);
+      const angleDiff = currentAngle - startAngle;
+      onUpdate(id, { rotation: startRotation + angleDiff });
+    };
+    
+    const handleUp = () => {
+      setIsRotating(false);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+    
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }, [id, rotation, onUpdate, isReadOnly]);
+
+  const baseSize = type === "sticker" ? 64 : 36;
+
   return (
     <motion.div
-      drag={!isReadOnly}
+      ref={elementRef}
+      drag={!isReadOnly && !isResizing && !isRotating}
       dragMomentum={false}
-      initial={{ x, y, rotate: rotation, scale }}
+      initial={{ x, y }}
       className={cn("absolute touch-none group", !isReadOnly && "cursor-move")}
+      style={{ 
+        x, 
+        y,
+        rotate: rotation,
+        transformOrigin: 'center center'
+      }}
       onDragEnd={(_, info) => {
         if (isReadOnly) return;
         const container = document.getElementById('canvas-container');
@@ -58,38 +132,79 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
         </div>
       )}
       {type === "sticker" && (
-        <div className="drop-shadow-md filter select-none relative">
+        <div 
+          className="drop-shadow-md filter select-none relative"
+          style={{ 
+            width: baseSize * scale, 
+            height: baseSize * scale,
+            transition: isResizing ? 'none' : 'width 0.1s, height 0.1s'
+          }}
+        >
           {content.startsWith('/assets') ? (
             <img 
               src={content} 
               alt="Sticker" 
-              style={{ width: 64 * scale, height: 64 * scale }}
-              className="object-contain" 
+              className="w-full h-full object-contain" 
               draggable={false} 
             />
           ) : (
-            <div style={{ fontSize: 36 * scale }}>{content}</div>
+            <div 
+              className="w-full h-full flex items-center justify-center"
+              style={{ fontSize: 36 * scale }}
+            >
+              {content}
+            </div>
           )}
           {!isReadOnly && (
             <>
+              {/* Remove button */}
               <button 
                 onClick={() => onRemove(id)}
-                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                className="absolute -top-3 -right-3 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
                 data-testid="button-remove-sticker"
               >
                 ×
               </button>
-              <div className="absolute -bottom-6 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                 <button 
-                   onClick={() => onUpdate(id, { scale: Math.max(0.5, scale - 0.2) })}
-                   className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
-                   data-testid="button-scale-down"
-                 >-</button>
-                 <button 
-                   onClick={() => onUpdate(id, { scale: Math.min(3, scale + 0.2) })}
-                   className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
-                   data-testid="button-scale-up"
-                 >+</button>
+              
+              {/* Resize handle - bottom right corner */}
+              <div 
+                onPointerDown={handleResizeStart}
+                className={cn(
+                  "absolute -bottom-2 -right-2 w-5 h-5 bg-primary rounded-full cursor-se-resize opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10 flex items-center justify-center",
+                  isResizing && "opacity-100 bg-primary/80"
+                )}
+                data-testid="handle-resize"
+              >
+                <div className="w-2 h-2 border-r-2 border-b-2 border-white" />
+              </div>
+              
+              {/* Rotate handle - top center */}
+              <div 
+                onPointerDown={handleRotateStart}
+                className={cn(
+                  "absolute -top-8 left-1/2 -translate-x-1/2 w-6 h-6 bg-blue-500 rounded-full cursor-grab opacity-0 group-hover:opacity-100 transition-opacity shadow-md z-10 flex items-center justify-center",
+                  isRotating && "opacity-100 cursor-grabbing bg-blue-600"
+                )}
+                data-testid="handle-rotate"
+              >
+                <RotateCw size={12} className="text-white" />
+              </div>
+              
+              {/* Visual connection line to rotate handle */}
+              <div className="absolute -top-6 left-1/2 w-px h-4 bg-blue-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
+              
+              {/* +/- buttons for quick scaling */}
+              <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                <button 
+                  onClick={() => onUpdate(id, { scale: Math.max(0.3, scale - 0.2) })}
+                  className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold text-gray-700 hover:bg-gray-100"
+                  data-testid="button-scale-down"
+                >-</button>
+                <button 
+                  onClick={() => onUpdate(id, { scale: Math.min(4, scale + 0.2) })}
+                  className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold text-gray-700 hover:bg-gray-100"
+                  data-testid="button-scale-up"
+                >+</button>
               </div>
             </>
           )}
@@ -101,7 +216,7 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
             src={content} 
             alt="User content" 
             className="max-w-[300px] h-auto rounded-sm shadow-md"
-            style={{ transform: `scale(${scale})` }}
+            style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
             draggable={false}
           />
           {!isReadOnly && (
