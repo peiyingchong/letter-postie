@@ -115,23 +115,29 @@ export default function Studio() {
         description: "Please fill in sender and recipient names.",
         variant: "destructive"
       });
-      setActiveTab("bg"); // Assuming inputs are in first tab for now
+      setActiveTab("bg");
       return;
     }
 
     try {
+      // Ensure images are properly handled in content
+      const content = {
+        ...letterState.content,
+        images: letterState.content.images || []
+      };
+
       const result = await createLetter.mutateAsync({
         senderName: letterState.senderName,
         recipientName: letterState.recipientName,
-        content: letterState.content,
-        status: "draft"
+        content: content,
+        status: "sent"
       });
       
       const url = `${window.location.origin}/letter/${result.shareId}`;
       setShareUrl(url);
       setShowShareModal(true);
     } catch (e) {
-      // Error handled in hook
+      console.error("Send error:", e);
     }
   };
 
@@ -227,12 +233,14 @@ export default function Studio() {
           {activeTab === "text" && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
               <label className="block text-xs font-mono uppercase text-muted-foreground tracking-wider">Typography</label>
-              <button 
-                onClick={handleAddText}
-                className="w-full py-3 border-2 border-dashed border-border rounded-xl text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-all font-medium flex items-center justify-center gap-2"
-              >
-                <Type size={18} /> Add Text Block
-              </button>
+              <div className="grid grid-cols-1 gap-2">
+                <button 
+                  onClick={handleAddText}
+                  className="w-full py-3 border-2 border-dashed border-border rounded-xl text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-all font-medium flex items-center justify-center gap-2"
+                >
+                  <Type size={18} /> Add Text Block
+                </button>
+              </div>
               
               <div className="h-px bg-border w-full" />
               
@@ -277,26 +285,26 @@ export default function Studio() {
 
           {activeTab === "stickers" && (
             <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
-               <label className="block text-xs font-mono uppercase text-muted-foreground tracking-wider">Stickers</label>
+               <label className="block text-xs font-mono uppercase text-muted-foreground tracking-wider">Festive Stickers</label>
                <div className="grid grid-cols-3 gap-3">
                  {[
+                   { id: 'lny-1', icon: '/assets/images/IMG_4579_2_1770275686839.jpg', premium: false },
+                   { id: 'lny-2', icon: '/assets/images/IMG_4579_1770275686840.jpg', premium: false },
+                   { id: 'lny-3', icon: '/assets/images/IMG_4580_2_1770275686841.jpg', premium: false },
+                   { id: 'lny-4', icon: '/assets/images/IMG_4580_3_1770275686841.jpg', premium: false },
+                   { id: 'lny-5', icon: '/assets/images/IMG_4580_1770275686841.jpg', premium: false },
                    { id: 'heart', icon: '❤️', premium: false },
                    { id: 'star', icon: '⭐', premium: false },
-                   { id: 'flower', icon: '🌸', premium: false },
-                   { id: 'moon', icon: '🌙', premium: false },
-                   { id: 'gem', icon: '💎', premium: true },
-                   { id: 'crown', icon: '👑', premium: true },
                  ].map((s) => (
                    <button
                      key={s.id}
-                     onClick={() => handleAddSticker(s.id, s.premium)}
-                     className="aspect-square rounded-xl bg-muted/30 hover:bg-muted/60 transition-colors flex items-center justify-center text-3xl relative group"
+                     onClick={() => handleAddSticker(s.icon, s.premium)}
+                     className="aspect-square rounded-xl bg-muted/30 hover:bg-muted/60 transition-colors flex items-center justify-center overflow-hidden relative group"
                    >
-                     {s.icon}
-                     {s.premium && (
-                       <div className="absolute top-1 right-1 bg-yellow-400 text-yellow-900 p-0.5 rounded-full shadow-sm">
-                         <Lock size={10} />
-                       </div>
+                     {s.icon.startsWith('/assets') ? (
+                       <img src={s.icon} alt="Sticker" className="w-full h-full object-contain p-1" />
+                     ) : (
+                       <span className="text-3xl">{s.icon}</span>
                      )}
                    </button>
                  ))}

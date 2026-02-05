@@ -87,6 +87,8 @@ export default {
         serif: ["'Playfair Display'", "serif"],
         mono: ["'Fira Code'", "monospace"],
         hand: ["'Architects Daughter'", "cursive"],
+        classic: ["'Libre Baskerville'", "serif"],
+        elegant: ["'Zeyada'", "cursive"],
       },
       keyframes: {
         "accordion-down": {

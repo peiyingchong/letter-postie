@@ -22,7 +22,7 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
       drag
       dragMomentum={false}
       initial={{ x, y, rotate: rotation, scale }}
-      className="absolute cursor-move touch-none"
+      className="absolute cursor-move touch-none group"
       onDragEnd={(_, info) => {
         const container = document.getElementById('canvas-container');
         if (container) {
@@ -39,20 +39,27 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
           contentEditable
           suppressContentEditableWarning
           className={cn("px-2 py-1 min-w-[100px] outline-none focus:ring-2 ring-primary/20 rounded", style?.font || "font-hand")} 
-          style={{ color: style?.color, fontSize: style?.fontSize }}
+          style={{ color: style?.color, fontSize: (style?.fontSize || 24) * scale }}
           onBlur={(e) => onUpdate(id, { text: e.currentTarget.textContent })}
         >
           {content}
         </div>
       )}
       {type === "sticker" && (
-        <div className="text-4xl drop-shadow-md filter">{content}</div>
+        <div className="drop-shadow-md filter select-none">
+          {content.startsWith('/assets') ? (
+            <img src={content} alt="Sticker" className="w-16 h-16 object-contain" draggable={false} />
+          ) : (
+            <div className="text-4xl">{content}</div>
+          )}
+        </div>
       )}
       {type === "image" && (
         <img 
           src={content} 
           alt="User content" 
-          className="max-w-[200px] h-auto rounded-sm shadow-md"
+          className="max-w-[300px] h-auto rounded-sm shadow-md"
+          style={{ transform: `scale(${scale})` }}
           draggable={false}
         />
       )}
@@ -76,7 +83,7 @@ export function StudioCanvas({ background, content, onUpdateElement }: StudioCan
   const getBgClass = (bg: string) => {
     switch (bg) {
       case 'crumpled-paper': return 'bg-pattern-crumpled';
-      case 'midnight-blue': return 'bg-pattern-midnight text-white';
+      case 'midnight-blue': return 'bg-pattern-nordwood';
       case 'rose-petal': return 'bg-pattern-rose';
       default: return 'bg-texture-paper bg-white';
     }
@@ -88,10 +95,19 @@ export function StudioCanvas({ background, content, onUpdateElement }: StudioCan
         id="canvas-container"
         ref={containerRef}
         className={cn(
-          "aspect-[5/7] h-full max-h-[80vh] w-auto shadow-2xl relative overflow-hidden transition-all duration-500 rounded-sm",
+          "aspect-[7/5] w-full max-w-[900px] h-auto shadow-2xl relative overflow-hidden transition-all duration-500 rounded-sm",
           getBgClass(background)
         )}
       >
+        <div className="absolute top-4 right-4 z-10 w-24 h-24 border-2 border-dashed border-primary/20 rounded flex items-center justify-center bg-white/50 backdrop-blur-sm group">
+           <div 
+             contentEditable 
+             suppressContentEditableWarning
+             className="text-[10px] font-hand text-center p-1 outline-none w-full"
+           >
+             STAMP
+           </div>
+        </div>
         {/* Render Text */}
         {content.textElements.map((el) => (
           <DraggableElement 
