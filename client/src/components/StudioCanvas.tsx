@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { RotateCw } from "lucide-react";
@@ -94,7 +94,6 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
     }
   };
 
-  // For images: only enable drag when already selected and actively dragging
   const canDrag = !isReadOnly && !isResizing && !isRotating && (type !== "image" || (isSelected && isDragging));
 
   return (
@@ -121,12 +120,13 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
         setIsDragging(false);
         if (isReadOnly) return;
         if (type === "image" && !isSelected) return;
-        const container = document.getElementById('canvas-container');
+        const container = document.getElementById('canvas-inner');
         if (container) {
           const rect = container.getBoundingClientRect();
+          const scale = rect.width / 900;
           onUpdate(id, { 
-            x: info.point.x - rect.left, 
-            y: info.point.y - rect.top 
+            x: (info.point.x - rect.left) / scale, 
+            y: (info.point.y - rect.top) / scale 
           });
         }
       }}
@@ -179,7 +179,6 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
           )}
           {!isReadOnly && (
             <>
-              {/* Remove button */}
               <button 
                 onClick={() => onRemove(id)}
                 className="absolute -top-3 -right-3 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
@@ -188,7 +187,6 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
                 ×
               </button>
               
-              {/* Resize handle - bottom right corner */}
               <div 
                 onPointerDown={handleResizeStart}
                 className={cn(
@@ -200,7 +198,6 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
                 <div className="w-2 h-2 border-r-2 border-b-2 border-white" />
               </div>
               
-              {/* Rotate handle - top center */}
               <div 
                 onPointerDown={handleRotateStart}
                 className={cn(
@@ -212,10 +209,8 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
                 <RotateCw size={12} className="text-white" />
               </div>
               
-              {/* Visual connection line to rotate handle */}
               <div className="absolute -top-6 left-1/2 w-px h-4 bg-blue-500/50 opacity-0 group-hover:opacity-100 transition-opacity" />
               
-              {/* +/- buttons for quick scaling */}
               <div className="absolute -bottom-7 left-1/2 -translate-x-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                 <button 
                   onClick={() => onUpdate(id, { scale: Math.max(0.3, scale - 0.2) })}
@@ -244,7 +239,6 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
             style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
             draggable={false}
           />
-          {/* Controls only show when selected */}
           {!isReadOnly && isSelected && (
             <>
               <button 
@@ -258,7 +252,6 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
                 ×
               </button>
               
-              {/* Resize handle */}
               <div 
                 onPointerDown={(e) => {
                   e.stopPropagation();
@@ -273,7 +266,6 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
                 <div className="w-2 h-2 border-r-2 border-b-2 border-white" />
               </div>
               
-              {/* Scale buttons */}
               <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 flex gap-1 z-10">
                 <button 
                   onClick={(e) => {
@@ -293,7 +285,6 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
                 >+</button>
               </div>
               
-              {/* Drag hint */}
               <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black/70 text-white text-xs px-2 py-1 rounded whitespace-nowrap">
                 Drag to move
               </div>
@@ -315,11 +306,35 @@ interface StudioCanvasProps {
   onUpdateElement: (type: string, id: string, data: any) => void;
   onRemoveElement?: (type: string, id: string) => void;
   isReadOnly?: boolean;
+  senderName?: string;
+  showFooter?: boolean;
 }
 
-export function StudioCanvas({ background, content, onUpdateElement, onRemoveElement, isReadOnly }: StudioCanvasProps) {
+const BASE_WIDTH = 900;
+const BASE_HEIGHT = 643; // 7:5 aspect ratio
+
+export function StudioCanvas({ background, content, onUpdateElement, onRemoveElement, isReadOnly, senderName, showFooter }: StudioCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [canvasScale, setCanvasScale] = useState(1);
+
+  useEffect(() => {
+    const updateScale = () => {
+      if (containerRef.current) {
+        const actualWidth = containerRef.current.offsetWidth;
+        setCanvasScale(actualWidth / BASE_WIDTH);
+      }
+    };
+
+    updateScale();
+    
+    const resizeObserver = new ResizeObserver(updateScale);
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   const getBgClass = (bg: string) => {
     switch (bg) {
@@ -340,79 +355,108 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
   };
 
   const handleCanvasClick = (e: React.MouseEvent) => {
-    // Only deselect if clicking directly on canvas background
-    if (e.target === e.currentTarget || (e.target as HTMLElement).id === 'canvas-container') {
+    if (e.target === e.currentTarget || (e.target as HTMLElement).id === 'canvas-inner') {
       setSelectedImageId(null);
     }
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-4 sm:p-8 bg-muted/20">
+    <div className="w-full h-full flex items-center justify-center p-2 sm:p-4 md:p-6 bg-muted/20">
       <div 
         id="canvas-container"
         ref={containerRef}
-        onClick={handleCanvasClick}
         className={cn(
           "aspect-[7/5] w-full max-w-[900px] h-auto shadow-2xl relative overflow-hidden transition-all duration-500 rounded-sm",
           getBgClass(background)
         )}
       >
-        {/* Render Text */}
-        {content.textElements.map((el) => (
-          <DraggableElement 
-            key={el.id} 
-            {...el} 
-            type="text" 
-            content={el.text} 
-            isReadOnly={isReadOnly}
-            style={{ font: el.font, color: el.color, fontSize: el.fontSize }}
-            onUpdate={(id, data) => onUpdateElement('text', id, data)} 
-            onRemove={(id) => handleRemove('text', id)}
-          />
-        ))}
-
-        {/* Render Images */}
-        {content.images?.map((el) => (
-          <DraggableElement 
-            key={el.id} 
-            {...el} 
-            type="image" 
-            content={el.url}
-            isReadOnly={isReadOnly}
-            isSelected={selectedImageId === el.id}
-            onSelect={(id) => setSelectedImageId(id)}
-            onUpdate={(id, data) => onUpdateElement('image', id, data)} 
-            onRemove={(id) => handleRemove('image', id)}
-          />
-        ))}
-
-        {/* Render Stickers */}
-        {content.stickers.map((el) => {
-          const stickerContent = el.stickerId;
-          
-          return (
+        {/* Scaled content wrapper - everything inside scales proportionally */}
+        <div 
+          id="canvas-inner"
+          onClick={handleCanvasClick}
+          className="absolute inset-0"
+          style={{
+            transform: `scale(${canvasScale})`,
+            transformOrigin: 'top left',
+            width: BASE_WIDTH,
+            height: BASE_HEIGHT
+          }}
+        >
+          {/* Render Text */}
+          {content.textElements.map((el) => (
             <DraggableElement 
               key={el.id} 
               {...el} 
-              type="sticker" 
-              content={stickerContent}
+              type="text" 
+              content={el.text} 
               isReadOnly={isReadOnly}
-              onUpdate={(id, data) => onUpdateElement('sticker', id, data)} 
-              onRemove={(id) => handleRemove('sticker', id)}
+              style={{ font: el.font, color: el.color, fontSize: el.fontSize }}
+              onUpdate={(id, data) => onUpdateElement('text', id, data)} 
+              onRemove={(id) => handleRemove('text', id)}
             />
-          );
-        })}
+          ))}
 
-        {/* Stamp - rendered last for z-index */}
-        <div className="absolute top-4 right-4 z-50 w-24 h-24 flex items-center justify-center pointer-events-none">
-           <div className="w-20 h-24 border-2 border-primary/40 rounded-sm relative flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] overflow-hidden shadow-md">
-             <div className="absolute inset-0 border-[6px] border-white/20 pointer-events-none" />
-             <div className="text-[8px] font-serif uppercase tracking-[0.2em] text-primary/60 mb-1">Postie</div>
-             <div className="w-10 h-10 rounded-full border border-primary/20 flex items-center justify-center">
-               <div className="text-xl font-serif text-primary/40 italic">P</div>
-             </div>
-             <div className="mt-2 text-[10px] font-bold text-primary/60 font-mono">2026</div>
-           </div>
+          {/* Render Images */}
+          {content.images?.map((el) => (
+            <DraggableElement 
+              key={el.id} 
+              {...el} 
+              type="image" 
+              content={el.url}
+              isReadOnly={isReadOnly}
+              isSelected={selectedImageId === el.id}
+              onSelect={(id) => setSelectedImageId(id)}
+              onUpdate={(id, data) => onUpdateElement('image', id, data)} 
+              onRemove={(id) => handleRemove('image', id)}
+            />
+          ))}
+
+          {/* Render Stickers */}
+          {content.stickers.map((el) => {
+            const stickerContent = el.stickerId;
+            
+            return (
+              <DraggableElement 
+                key={el.id} 
+                {...el} 
+                type="sticker" 
+                content={stickerContent}
+                isReadOnly={isReadOnly}
+                onUpdate={(id, data) => onUpdateElement('sticker', id, data)} 
+                onRemove={(id) => handleRemove('sticker', id)}
+              />
+            );
+          })}
+
+          {/* Footer inside letter - scales with content */}
+          {showFooter && senderName && (
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-white/95 via-white/80 to-transparent pt-16 pb-6 px-8">
+              <div className="text-center">
+                <p className="text-muted-foreground font-serif text-base mb-3">
+                  With love from {senderName}
+                </p>
+                <a 
+                  href="/" 
+                  className="inline-block px-6 py-2 rounded-full bg-primary/10 text-primary font-serif text-sm hover:bg-primary/20 transition-colors"
+                  data-testid="link-create-own"
+                >
+                  Create your own letter with Postie
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Stamp */}
+          <div className="absolute top-4 right-4 z-50 w-24 h-24 flex items-center justify-center pointer-events-none">
+            <div className="w-20 h-24 border-2 border-primary/40 rounded-sm relative flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] overflow-hidden shadow-md">
+              <div className="absolute inset-0 border-[6px] border-white/20 pointer-events-none" />
+              <div className="text-[8px] font-serif uppercase tracking-[0.2em] text-primary/60 mb-1">Postie</div>
+              <div className="w-10 h-10 rounded-full border border-primary/20 flex items-center justify-center">
+                <div className="text-xl font-serif text-primary/40 italic">P</div>
+              </div>
+              <div className="mt-2 text-[10px] font-bold text-primary/60 font-mono">2026</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
