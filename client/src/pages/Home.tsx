@@ -101,7 +101,7 @@ export default function Home() {
           <div className="w-full h-32 bg-muted/30 rounded-xl flex items-center justify-center border border-dashed border-border mb-8">
             <span className="text-muted-foreground font-mono text-sm">Advertisement Space</span>
           </div>
-          <p className="text-muted-foreground font-serif italic">© 2024 Lunar Cards. Crafted with care.</p>
+          <p className="text-muted-foreground font-serif italic">© 2026 Postie. Crafted with care.</p>
         </div>
       </footer>
     </div>

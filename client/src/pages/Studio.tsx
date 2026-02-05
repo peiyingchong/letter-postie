@@ -10,7 +10,8 @@ import {
   X,
   Lock,
   Star,
-  Check
+  Check,
+  RotateCcw
 } from "lucide-react";
 import { useCreateLetter } from "@/hooks/use-letters";
 import { useToast } from "@/hooks/use-toast";
@@ -27,19 +28,27 @@ export default function Studio() {
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
 
-  // Editor State
-  const [letterState, setLetterState] = useState({
+  const getInitialState = () => ({
     senderName: "",
     recipientName: "",
     content: {
       background: "classic-white",
-      textElements: [
-        { id: "1", text: "Dearest friend,", x: 50, y: 50, font: "font-hand", color: "#334155", fontSize: 24, rotation: 0, scale: 1 }
-      ],
-      images: [],
+      textElements: [] as any[],
+      images: [] as any[],
       stickers: [] as any[]
     }
   });
+
+  const [letterState, setLetterState] = useState(getInitialState());
+
+  const handleReset = () => {
+    setLetterState(getInitialState());
+    setActiveTab("bg");
+    toast({
+      title: "Canvas cleared",
+      description: "Start fresh with a new letter."
+    });
+  };
 
   const handleAddText = () => {
     setLetterState(prev => ({
@@ -108,6 +117,20 @@ export default function Studio() {
     });
   };
 
+  const handleRemoveElement = (type: string, id: string) => {
+    setLetterState(prev => {
+      const content = { ...prev.content };
+      if (type === 'text') {
+        content.textElements = content.textElements.filter(el => el.id !== id);
+      } else if (type === 'sticker') {
+        content.stickers = content.stickers.filter(el => el.id !== id);
+      } else if (type === 'image') {
+        content.images = content.images.filter(el => el.id !== id);
+      }
+      return { ...prev, content };
+    });
+  };
+
   const handleSend = async () => {
     if (!letterState.senderName || !letterState.recipientName) {
       toast({
@@ -120,7 +143,6 @@ export default function Studio() {
     }
 
     try {
-      // Ensure images are properly handled in content
       const content = {
         ...letterState.content,
         images: letterState.content.images || []
@@ -146,27 +168,36 @@ export default function Studio() {
       {/* Mobile Header */}
       <div className="md:hidden h-16 border-b border-border flex items-center justify-between px-4 bg-white z-20">
         <Link href="/">
-          <button className="p-2 -ml-2"><ChevronLeft /></button>
+          <button className="p-2 -ml-2" data-testid="button-back-mobile"><ChevronLeft /></button>
         </Link>
-        <span className="font-serif font-bold text-lg">Studio</span>
-        <button onClick={handleSend} className="text-primary font-medium">Send</button>
+        <span className="font-serif font-bold text-lg">Postie</span>
+        <button onClick={handleSend} className="text-primary font-medium" data-testid="button-send-mobile">Send</button>
       </div>
 
       {/* Main Canvas Area */}
       <div className="flex-1 relative flex flex-col h-full bg-muted/20">
-        <div className="hidden md:flex absolute top-6 left-6 z-10">
+        <div className="hidden md:flex absolute top-6 left-6 z-10 gap-2">
           <Link href="/">
-            <button className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-full bg-white/80 backdrop-blur shadow-sm">
+            <button className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-full bg-white/80 backdrop-blur shadow-sm" data-testid="button-back">
               <ChevronLeft size={18} />
               Back
             </button>
           </Link>
+          <button 
+            onClick={handleReset}
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors px-4 py-2 rounded-full bg-white/80 backdrop-blur shadow-sm"
+            data-testid="button-reset"
+          >
+            <RotateCcw size={18} />
+            Start Fresh
+          </button>
         </div>
         
         <StudioCanvas 
           background={letterState.content.background}
           content={letterState.content}
           onUpdateElement={handleUpdateElement}
+          onRemoveElement={handleRemoveElement}
         />
       </div>
 
@@ -180,6 +211,7 @@ export default function Studio() {
             onClick={handleSend}
             disabled={createLetter.isPending}
             className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50"
+            data-testid="button-send"
           >
             {createLetter.isPending ? "Saving..." : <>Send <Send size={16} /></>}
           </button>
@@ -196,12 +228,14 @@ export default function Studio() {
                  className="w-full p-3 bg-muted/30 rounded-lg border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-serif"
                  value={letterState.recipientName}
                  onChange={e => setLetterState({...letterState, recipientName: e.target.value})}
+                 data-testid="input-recipient"
                />
                <input 
                  placeholder="From: Name"
                  className="w-full p-3 bg-muted/30 rounded-lg border border-border focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all font-serif"
                  value={letterState.senderName}
                  onChange={e => setLetterState({...letterState, senderName: e.target.value})}
+                 data-testid="input-sender"
                />
              </div>
           </div>
@@ -222,8 +256,9 @@ export default function Studio() {
                     key={bg.id}
                     onClick={() => setLetterState(prev => ({ ...prev, content: { ...prev.content, background: bg.id } }))}
                     className={`h-24 rounded-xl border-2 transition-all ${letterState.content.background === bg.id ? 'border-primary ring-2 ring-primary/20' : 'border-transparent hover:border-border'} ${bg.color} relative overflow-hidden group`}
+                    data-testid={`button-bg-${bg.id}`}
                   >
-                    <span className={`absolute bottom-2 left-3 text-xs font-medium ${bg.id === 'midnight-blue' ? 'text-white' : 'text-primary'}`}>{bg.name}</span>
+                    <span className={`absolute bottom-2 left-3 text-xs font-medium text-primary`}>{bg.name}</span>
                   </button>
                 ))}
               </div>
@@ -237,6 +272,7 @@ export default function Studio() {
                 <button 
                   onClick={handleAddText}
                   className="w-full py-3 border-2 border-dashed border-border rounded-xl text-muted-foreground hover:text-primary hover:border-primary hover:bg-primary/5 transition-all font-medium flex items-center justify-center gap-2"
+                  data-testid="button-add-text"
                 >
                   <Type size={18} /> Add Text Block
                 </button>
@@ -276,6 +312,7 @@ export default function Studio() {
                     reader.readAsDataURL(file);
                   }
                 }}
+                data-testid="dropzone-image"
               >
                 <Palette size={24} />
                 <span className="text-sm">Drop image here to add</span>
@@ -311,6 +348,7 @@ export default function Studio() {
                      key={s.id}
                      onClick={() => handleAddSticker(s.icon, s.premium)}
                      className="aspect-square rounded-xl bg-muted/30 hover:bg-muted/60 transition-colors flex items-center justify-center overflow-hidden relative group"
+                     data-testid={`button-sticker-${s.id}`}
                    >
                      {s.icon.startsWith('/assets') ? (
                        <img src={s.icon} alt="Sticker" className="w-full h-full object-contain p-1" />
@@ -339,6 +377,7 @@ export default function Studio() {
                   ? 'bg-primary text-primary-foreground shadow-md' 
                   : 'text-muted-foreground hover:bg-muted'
               }`}
+              data-testid={`button-tab-${tab.id}`}
             >
               {tab.icon}
               <span className="text-[10px] font-medium uppercase tracking-wider">{tab.label}</span>
@@ -355,7 +394,7 @@ export default function Studio() {
               <Star className="fill-yellow-400 text-yellow-400" /> Premium Sticker
             </DialogTitle>
             <DialogDescription>
-              Unlock this premium sticker for just $0.99. Support the creators of Lunar Cards.
+              Unlock this premium sticker for just $0.99. Support the creators of Postie.
             </DialogDescription>
           </DialogHeader>
           <div className="flex justify-end gap-3 mt-4">
@@ -386,14 +425,15 @@ export default function Studio() {
                 navigator.clipboard.writeText(shareUrl);
                 toast({ title: "Copied!", description: "Link copied to clipboard." });
               }}
-              className="p-2 hover:bg-white rounded-md transition-colors"
+              className="p-2 hover:bg-white rounded-md transition-colors flex-shrink-0"
+              data-testid="button-copy-link"
             >
               <Check size={16} className="text-green-600" />
             </button>
           </div>
           <div className="flex justify-end mt-4">
             <Link href={`/letter/${shareUrl.split('/').pop()}`}>
-              <button className="text-sm font-medium text-primary hover:underline">Preview Letter</button>
+              <button className="text-sm font-medium text-primary hover:underline" data-testid="button-preview">Preview Letter</button>
             </Link>
           </div>
         </DialogContent>

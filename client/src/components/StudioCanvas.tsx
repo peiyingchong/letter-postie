@@ -12,9 +12,11 @@ interface ElementProps {
   content: string;
   style?: any;
   onUpdate: (id: string, updates: any) => void;
+  onRemove: (id: string) => void;
+  isReadOnly?: boolean;
 }
 
-const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onUpdate, isReadOnly }: ElementProps & { isReadOnly?: boolean }) => {
+const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onUpdate, onRemove, isReadOnly }: ElementProps) => {
   return (
     <motion.div
       drag={!isReadOnly}
@@ -34,14 +36,25 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
       }}
     >
       {type === "text" && (
-        <div 
-          contentEditable={!isReadOnly}
-          suppressContentEditableWarning
-          className={cn("px-2 py-1 min-w-[100px] outline-none rounded", !isReadOnly && "focus:ring-2 ring-primary/20", style?.font || "font-hand")} 
-          style={{ color: style?.color, fontSize: (style?.fontSize || 24) * scale }}
-          onBlur={(e) => !isReadOnly && onUpdate(id, { text: e.currentTarget.textContent })}
-        >
-          {content}
+        <div className="relative">
+          <div 
+            contentEditable={!isReadOnly}
+            suppressContentEditableWarning
+            className={cn("px-2 py-1 min-w-[100px] outline-none rounded", !isReadOnly && "focus:ring-2 ring-primary/20", style?.font || "font-hand")} 
+            style={{ color: style?.color, fontSize: (style?.fontSize || 24) * scale }}
+            onBlur={(e) => !isReadOnly && onUpdate(id, { text: e.currentTarget.textContent })}
+          >
+            {content}
+          </div>
+          {!isReadOnly && (
+            <button 
+              onClick={() => onRemove(id)}
+              className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+              data-testid="button-remove-text"
+            >
+              ×
+            </button>
+          )}
         </div>
       )}
       {type === "sticker" && (
@@ -58,16 +71,27 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
             <div style={{ fontSize: 36 * scale }}>{content}</div>
           )}
           {!isReadOnly && (
-            <div className="absolute -bottom-6 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-               <button 
-                 onClick={() => onUpdate(id, { scale: Math.max(0.5, scale - 0.2) })}
-                 className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
-               >-</button>
-               <button 
-                 onClick={() => onUpdate(id, { scale: Math.min(3, scale + 0.2) })}
-                 className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
-               >+</button>
-            </div>
+            <>
+              <button 
+                onClick={() => onRemove(id)}
+                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+                data-testid="button-remove-sticker"
+              >
+                ×
+              </button>
+              <div className="absolute -bottom-6 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                 <button 
+                   onClick={() => onUpdate(id, { scale: Math.max(0.5, scale - 0.2) })}
+                   className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
+                   data-testid="button-scale-down"
+                 >-</button>
+                 <button 
+                   onClick={() => onUpdate(id, { scale: Math.min(3, scale + 0.2) })}
+                   className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
+                   data-testid="button-scale-up"
+                 >+</button>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -81,16 +105,25 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
             draggable={false}
           />
           {!isReadOnly && (
-            <div className="absolute -bottom-6 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
-               <button 
-                 onClick={() => onUpdate(id, { scale: Math.max(0.5, scale - 0.2) })}
-                 className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
-               >-</button>
-               <button 
-                 onClick={() => onUpdate(id, { scale: Math.min(3, scale + 0.2) })}
-                 className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
-               >+</button>
-            </div>
+            <>
+              <button 
+                onClick={() => onRemove(id)}
+                className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover/img:opacity-100 transition-opacity shadow-sm"
+                data-testid="button-remove-image"
+              >
+                ×
+              </button>
+              <div className="absolute -bottom-6 left-0 right-0 flex justify-center gap-1 opacity-0 group-hover/img:opacity-100 transition-opacity">
+                 <button 
+                   onClick={() => onUpdate(id, { scale: Math.max(0.5, scale - 0.2) })}
+                   className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
+                 >-</button>
+                 <button 
+                   onClick={() => onUpdate(id, { scale: Math.min(3, scale + 0.2) })}
+                   className="w-5 h-5 bg-white shadow rounded-full flex items-center justify-center text-[10px] font-bold"
+                 >+</button>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -106,10 +139,11 @@ interface StudioCanvasProps {
     images: any[];
   };
   onUpdateElement: (type: string, id: string, data: any) => void;
+  onRemoveElement?: (type: string, id: string) => void;
   isReadOnly?: boolean;
 }
 
-export function StudioCanvas({ background, content, onUpdateElement, isReadOnly }: StudioCanvasProps) {
+export function StudioCanvas({ background, content, onUpdateElement, onRemoveElement, isReadOnly }: StudioCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const getBgClass = (bg: string) => {
@@ -118,6 +152,12 @@ export function StudioCanvas({ background, content, onUpdateElement, isReadOnly 
       case 'midnight-blue': return 'bg-pattern-olive';
       case 'rose-petal': return 'bg-pattern-rose';
       default: return 'bg-texture-paper bg-white';
+    }
+  };
+
+  const handleRemove = (type: string, id: string) => {
+    if (onRemoveElement) {
+      onRemoveElement(type, id);
     }
   };
 
@@ -131,23 +171,6 @@ export function StudioCanvas({ background, content, onUpdateElement, isReadOnly 
           getBgClass(background)
         )}
       >
-        <div className="absolute top-4 right-4 z-10 w-24 h-24 flex items-center justify-center">
-           <div className="w-20 h-24 border-2 border-primary/40 rounded-sm relative flex flex-col items-center justify-center bg-white/40 backdrop-blur-[2px] overflow-hidden">
-             <div className="absolute inset-0 border-[6px] border-white/20 pointer-events-none" />
-             <div className="text-[8px] font-serif uppercase tracking-[0.2em] text-primary/60 mb-1">Postal</div>
-             <div className="w-10 h-10 rounded-full border border-primary/20 flex items-center justify-center">
-               <div className="text-xl font-serif text-primary/40 italic">L</div>
-             </div>
-             <div className="mt-2 text-[10px] font-bold text-primary/60 font-mono">2026</div>
-           </div>
-           <div 
-             contentEditable={!isReadOnly}
-             suppressContentEditableWarning
-             className="absolute inset-0 flex items-center justify-center text-[10px] font-hand text-center p-1 outline-none z-10 text-primary font-bold"
-           >
-             {isReadOnly ? "" : "STAMP"}
-           </div>
-        </div>
         {/* Render Text */}
         {content.textElements.map((el) => (
           <DraggableElement 
@@ -158,6 +181,7 @@ export function StudioCanvas({ background, content, onUpdateElement, isReadOnly 
             isReadOnly={isReadOnly}
             style={{ font: el.font, color: el.color, fontSize: el.fontSize }}
             onUpdate={(id, data) => onUpdateElement('text', id, data)} 
+            onRemove={(id) => handleRemove('text', id)}
           />
         ))}
 
@@ -170,6 +194,7 @@ export function StudioCanvas({ background, content, onUpdateElement, isReadOnly 
             content={el.url}
             isReadOnly={isReadOnly}
             onUpdate={(id, data) => onUpdateElement('image', id, data)} 
+            onRemove={(id) => handleRemove('image', id)}
           />
         ))}
 
@@ -185,9 +210,22 @@ export function StudioCanvas({ background, content, onUpdateElement, isReadOnly 
               content={stickerContent}
               isReadOnly={isReadOnly}
               onUpdate={(id, data) => onUpdateElement('sticker', id, data)} 
+              onRemove={(id) => handleRemove('sticker', id)}
             />
           );
         })}
+
+        {/* Stamp - rendered last for z-index */}
+        <div className="absolute top-4 right-4 z-50 w-24 h-24 flex items-center justify-center pointer-events-none">
+           <div className="w-20 h-24 border-2 border-primary/40 rounded-sm relative flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] overflow-hidden shadow-md">
+             <div className="absolute inset-0 border-[6px] border-white/20 pointer-events-none" />
+             <div className="text-[8px] font-serif uppercase tracking-[0.2em] text-primary/60 mb-1">Postie</div>
+             <div className="w-10 h-10 rounded-full border border-primary/20 flex items-center justify-center">
+               <div className="text-xl font-serif text-primary/40 italic">P</div>
+             </div>
+             <div className="mt-2 text-[10px] font-bold text-primary/60 font-mono">2026</div>
+           </div>
+        </div>
       </div>
     </div>
   );
