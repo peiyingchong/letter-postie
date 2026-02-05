@@ -1,0 +1,38 @@
+1. Product Vision
+A high-aesthetic digital stationery app where users create "tactile" multimedia letters. The goal is to make digital communication feel as special as receiving physical mail.
+
+2. User Journey & Page Requirements
+Page 1: Home Screen
+Hero Section: A clean, minimalist header with the name "Lunar Cards."
+Main CTA: A large "Start a Letter" button.
+Inspiration Gallery: A "Recent Creations" grid showing 3 non-functional preview cards (e.g., "Birthday Vibe," "Love Note," "Thank You").
+Ad Slot: A responsive banner at the bottom of the screen.
+Page 2: The Studio (Editor)
+The Canvas: A 5:7 aspect ratio "Paper" container.
+Background Selector: A tray to switch textures (Classic White, Crumpled Paper, Midnight Blue, Rose Petal).
+Text Styling: * Add text boxes.
+Font options: Handwritten (Cursive), Typewriter (Monospace), Elegant (Serif).
+Media Handling:
+Drag-and-Drop: Ability to upload images and move them anywhere on the canvas.
+Sticker Library: A grid of decorative icons/shapes.
+Monetization Prompt: Premium stickers (marked with a star) trigger a $0.99 payment simulation/overlay.
+The "Send" Flow: A "Send" button that opens a choice: "Send via Email" or "Get Share Link."
+Page 3: The Receiver's Experience
+The Unboxing:
+User opens a link and sees a closed Envelope with their name.
+User clicks the flap.
+Animation: The flap opens, and the Letter "slides out" (upward pull) and expands to full screen.
+Viral Loop: At the bottom of the letter, a button appears: "That was sweet! Create your own Lunar Card."
+Ad Slot: A native ad unit placed below the "Create Your Own" button.
+3. Monetization Strategy
+Micro-transactions: $0.99 for "Premium" stickers or backgrounds.
+Display Ads: * Banner: Home page and Receiver page.
+Interstitial: Full-screen ad shown only after the sender clicks "Send" (this is the highest earning ad type).
+Pro Tier (Optional): $1.99 to remove all ads for both the sender and the receiver.
+4. Technical Specifications for AI
+Tech Stack: React, Tailwind CSS, Framer Motion (for animations).
+State Logic: * The app must save the letter configuration (background, text content, image coordinates, and sticker IDs) as a JSON object.
+The "Receiver Link" should be a unique ID that loads this specific JSON object.
+Animation Focus:
+Envelope Pull-out: Use a Y-axis translation with a slight scale increase.
+Drag-and-Drop: Use framer-motion's drag prop for images and stickers.
