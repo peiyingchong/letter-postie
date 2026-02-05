@@ -19,7 +19,7 @@ interface ElementProps {
   onSelect?: (id: string) => void;
 }
 
-const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style, onUpdate, onRemove, isReadOnly, isSelected, onSelect }: ElementProps) => {
+const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style, onUpdate, onRemove, isReadOnly, isSelected, onSelect, canvasScale = 1 }: ElementProps & { canvasScale?: number }) => {
   const elementRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
@@ -34,6 +34,65 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     motionX.set(x);
     motionY.set(y);
   }, [x, y, motionX, motionY]);
+
+  // Manual drag handling with scale compensation and pointer capture
+  const handleDragStart = useCallback((e: React.PointerEvent) => {
+    if (isReadOnly || isResizing || isRotating) return;
+    e.stopPropagation();
+    setIsDragging(true);
+    
+    // Capture pointer for reliable tracking even outside element/window
+    const element = elementRef.current;
+    if (element) {
+      element.setPointerCapture(e.pointerId);
+    }
+    
+    const pointerId = e.pointerId;
+    const startPointerX = e.clientX;
+    const startPointerY = e.clientY;
+    const startX = x;
+    const startY = y;
+    
+    const handleMove = (moveEvent: PointerEvent) => {
+      // Calculate delta in screen pixels, then divide by canvas scale
+      // to get proper movement in canvas coordinate space
+      const dx = (moveEvent.clientX - startPointerX) / canvasScale;
+      const dy = (moveEvent.clientY - startPointerY) / canvasScale;
+      
+      motionX.set(startX + dx);
+      motionY.set(startY + dy);
+    };
+    
+    const cleanup = () => {
+      setIsDragging(false);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+      window.removeEventListener('pointercancel', handleCancel);
+      if (element) {
+        element.releasePointerCapture(pointerId);
+      }
+    };
+    
+    const handleUp = (upEvent: PointerEvent) => {
+      // Calculate final position
+      const dx = (upEvent.clientX - startPointerX) / canvasScale;
+      const dy = (upEvent.clientY - startPointerY) / canvasScale;
+      
+      onUpdate(id, { x: startX + dx, y: startY + dy });
+      cleanup();
+    };
+    
+    const handleCancel = () => {
+      // Reset to original position on cancel
+      motionX.set(startX);
+      motionY.set(startY);
+      cleanup();
+    };
+    
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+    window.addEventListener('pointercancel', handleCancel);
+  }, [id, x, y, canvasScale, isReadOnly, isResizing, isRotating, motionX, motionY, onUpdate]);
 
   const handleResizeStart = useCallback((e: React.PointerEvent) => {
     if (isReadOnly) return;
@@ -104,20 +163,14 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     }
   };
 
-  // Allow drag for all types when not in resize/rotate mode
-  // All elements can be dragged freely - no selection required
-  const canDrag = !isReadOnly && !isResizing && !isRotating;
-
   return (
     <motion.div
       ref={elementRef}
-      drag={canDrag}
-      dragMomentum={false}
-      dragElastic={0}
-      whileDrag={{ cursor: "grabbing" }}
       initial={{ x, y }}
       className={cn(
-        "absolute touch-none select-none cursor-grab",
+        "absolute touch-none select-none",
+        !isReadOnly && !isResizing && !isRotating && "cursor-grab",
+        isDragging && "cursor-grabbing",
         !isReadOnly && "hover:z-10"
       )}
       style={{ 
@@ -128,21 +181,7 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
         willChange: 'transform'
       }}
       onClick={handleClick}
-      onDragStart={() => setIsDragging(true)}
-      onDragEnd={(_, info) => {
-        setIsDragging(false);
-        if (isReadOnly) return;
-        const container = document.getElementById('canvas-inner');
-        if (container) {
-          const rect = container.getBoundingClientRect();
-          const canvasScaleVal = rect.width / 900;
-          // Use offset (delta from start) for accurate positioning
-          // This ensures element lands where user dragged it, not at cursor position
-          const newX = x + info.offset.x / canvasScaleVal;
-          const newY = y + info.offset.y / canvasScaleVal;
-          onUpdate(id, { x: newX, y: newY });
-        }
-      }}
+      onPointerDown={handleDragStart}
     >
       {type === "text" && (
         <div className="relative group">
@@ -427,6 +466,7 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
               type="text" 
               content={el.text} 
               isReadOnly={isReadOnly}
+              canvasScale={canvasScale}
               style={{ font: el.font, color: el.color, fontSize: el.fontSize }}
               onUpdate={(id, data) => onUpdateElement('text', id, data)} 
               onRemove={(id) => handleRemove('text', id)}
@@ -441,6 +481,7 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
               type="image" 
               content={el.url}
               isReadOnly={isReadOnly}
+              canvasScale={canvasScale}
               isSelected={selectedImageId === el.id}
               onSelect={(id) => setSelectedImageId(id)}
               onUpdate={(id, data) => onUpdateElement('image', id, data)} 
@@ -459,6 +500,7 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
                 type="sticker" 
                 content={stickerContent}
                 isReadOnly={isReadOnly}
+                canvasScale={canvasScale}
                 onUpdate={(id, data) => onUpdateElement('sticker', id, data)} 
                 onRemove={(id) => handleRemove('sticker', id)}
               />
