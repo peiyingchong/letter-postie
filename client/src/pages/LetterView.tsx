@@ -74,6 +74,7 @@ export default function LetterView() {
                   background={letter.content.background}
                   content={letter.content}
                   onUpdateElement={() => {}} // Read only
+                  isReadOnly={true}
                 />
              </div>
           </motion.div>

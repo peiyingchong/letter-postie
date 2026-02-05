@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Palette, 
   Type, 
-  Sticker, 
+  Flower, 
   Send, 
   ChevronLeft,
   X,
@@ -216,7 +216,7 @@ export default function Studio() {
                   { id: 'classic-white', name: 'Classic', color: 'bg-white' },
                   { id: 'crumpled-paper', name: 'Vintage', color: 'bg-[#f4f1ea]' },
                   { id: 'rose-petal', name: 'Blush', color: 'bg-[#fff0f5]' },
-                  { id: 'midnight-blue', name: 'Midnight', color: 'bg-[#1e293b]' },
+                  { id: 'midnight-blue', name: 'Olive', color: 'bg-[#d4d8c1]' },
                 ].map((bg) => (
                   <button
                     key={bg.id}
@@ -292,6 +292,18 @@ export default function Studio() {
                    { id: 'lny-stamp-2', icon: '/assets/stickers/lny-stamp-2.jpg', premium: false },
                    { id: 'lny-stamp-3', icon: '/assets/stickers/lny-stamp-3.jpeg', premium: false },
                    { id: 'lny-horses', icon: '/assets/stickers/lny-horses.png', premium: false },
+                   { id: 'heart-red', icon: '/assets/stickers/heart-red.png', premium: false },
+                   { id: 'pepper', icon: '/assets/stickers/pepper.png', premium: false },
+                   { id: 'tomato', icon: '/assets/stickers/tomato.png', premium: false },
+                   { id: 'carrot', icon: '/assets/stickers/carrot.png', premium: false },
+                   { id: 'potato', icon: '/assets/stickers/potato.png', premium: false },
+                   { id: 'lemon', icon: '/assets/stickers/lemon.png', premium: false },
+                   { id: 'pasta', icon: '/assets/stickers/pasta.png', premium: false },
+                   { id: 'cheese', icon: '/assets/stickers/cheese.png', premium: false },
+                   { id: 'pizza', icon: '/assets/stickers/pizza.png', premium: false },
+                   { id: 'fish-plate', icon: '/assets/stickers/fish-plate.png', premium: false },
+                   { id: 'fish-group', icon: '/assets/stickers/fish-group.png', premium: false },
+                   { id: 'sardines', icon: '/assets/stickers/sardines.png', premium: false },
                    { id: 'heart', icon: '❤️', premium: false },
                    { id: 'star', icon: '⭐', premium: false },
                  ].map((s) => (
@@ -317,7 +329,7 @@ export default function Studio() {
           {[
             { id: "bg", icon: <Palette size={20} />, label: "Paper" },
             { id: "text", icon: <Type size={20} />, label: "Text" },
-            { id: "stickers", icon: <Sticker size={20} />, label: "Decor" },
+            { id: "stickers", icon: <Flower size={20} />, label: "Decor" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -367,8 +379,8 @@ export default function Studio() {
               Your letter has been sealed. Share this unique link with your recipient.
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-border flex items-center justify-between gap-2">
-            <code className="text-sm font-mono truncate text-muted-foreground">{shareUrl}</code>
+          <div className="mt-4 p-4 bg-muted/30 rounded-lg border border-border flex items-center justify-between gap-2 overflow-hidden">
+            <code className="text-sm font-mono break-all text-muted-foreground">{shareUrl}</code>
             <button 
               onClick={() => {
                 navigator.clipboard.writeText(shareUrl);
