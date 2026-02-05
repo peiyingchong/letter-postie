@@ -136,9 +136,10 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
         if (container) {
           const rect = container.getBoundingClientRect();
           const canvasScaleVal = rect.width / 900;
-          // Calculate position - allow free placement anywhere on canvas
-          const newX = (info.point.x - rect.left) / canvasScaleVal;
-          const newY = (info.point.y - rect.top) / canvasScaleVal;
+          // Use offset (delta from start) for accurate positioning
+          // This ensures element lands where user dragged it, not at cursor position
+          const newX = x + info.offset.x / canvasScaleVal;
+          const newY = y + info.offset.y / canvasScaleVal;
           onUpdate(id, { x: newX, y: newY });
         }
       }}
@@ -482,15 +483,36 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
             </div>
           )}
 
-          {/* Stamp */}
-          <div className="absolute top-4 right-4 z-50 w-24 h-24 flex items-center justify-center pointer-events-none">
-            <div className="w-20 h-24 border-2 border-primary/40 rounded-sm relative flex flex-col items-center justify-center bg-white/80 backdrop-blur-[2px] overflow-hidden shadow-md">
-              <div className="absolute inset-0 border-[6px] border-white/20 pointer-events-none" />
-              <div className="text-[8px] font-serif uppercase tracking-[0.2em] text-primary/60 mb-1">Postie</div>
-              <div className="w-10 h-10 rounded-full border border-primary/20 flex items-center justify-center">
-                <div className="text-xl font-serif text-primary/40 italic">P</div>
+          {/* Circular Chop-Style Stamp */}
+          <div className="absolute top-4 right-4 z-50 w-20 h-20 flex items-center justify-center pointer-events-none">
+            <div 
+              className="w-20 h-20 rounded-full border-[3px] border-primary relative flex flex-col items-center justify-center"
+              style={{ 
+                transform: 'rotate(-15deg)',
+                boxShadow: 'inset 0 0 0 2px transparent'
+              }}
+            >
+              {/* Outer decorative ring */}
+              <div className="absolute inset-1 rounded-full border-[1.5px] border-primary/60" />
+              
+              {/* Date text curved at top */}
+              <div className="absolute top-2 text-[7px] font-bold text-primary tracking-[0.15em] uppercase">
+                {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
               </div>
-              <div className="mt-2 text-[10px] font-bold text-primary/60 font-mono">2026</div>
+              
+              {/* Center text */}
+              <div className="text-lg font-serif font-bold text-primary tracking-wide">
+                POSTIE
+              </div>
+              
+              {/* Year at bottom */}
+              <div className="absolute bottom-2 text-[8px] font-bold text-primary tracking-[0.2em]">
+                {new Date().getFullYear()}
+              </div>
+              
+              {/* Small decorative dots */}
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-primary" />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 w-1 h-1 rounded-full bg-primary" />
             </div>
           </div>
         </div>
