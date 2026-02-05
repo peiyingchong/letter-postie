@@ -1,5 +1,5 @@
-import { useRef, useState, useCallback, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useRef, useState, useCallback, useEffect, memo } from "react";
+import { motion, useMotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { RotateCw } from "lucide-react";
 
@@ -19,11 +19,21 @@ interface ElementProps {
   onSelect?: (id: string) => void;
 }
 
-const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onUpdate, onRemove, isReadOnly, isSelected, onSelect }: ElementProps) => {
+const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style, onUpdate, onRemove, isReadOnly, isSelected, onSelect }: ElementProps) => {
   const elementRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  
+  // Use motion values for smooth drag without re-renders
+  const motionX = useMotionValue(x);
+  const motionY = useMotionValue(y);
+  
+  // Sync motion values when props change (from state updates)
+  useEffect(() => {
+    motionX.set(x);
+    motionY.set(y);
+  }, [x, y, motionX, motionY]);
 
   const handleResizeStart = useCallback((e: React.PointerEvent) => {
     if (isReadOnly) return;
@@ -94,46 +104,41 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
     }
   };
 
-  const canDrag = !isReadOnly && !isResizing && !isRotating && (type !== "image" || (isSelected && isDragging));
+  // Allow drag for all types when not in resize/rotate mode
+  // All elements can be dragged freely - no selection required
+  const canDrag = !isReadOnly && !isResizing && !isRotating;
 
   return (
     <motion.div
       ref={elementRef}
       drag={canDrag}
       dragMomentum={false}
+      dragElastic={0}
+      whileDrag={{ cursor: "grabbing" }}
       initial={{ x, y }}
       className={cn(
-        "absolute touch-none",
-        !isReadOnly && type !== "image" && "cursor-move",
-        type === "image" && !isReadOnly && "cursor-pointer",
-        type === "image" && isSelected && "cursor-move"
+        "absolute touch-none select-none cursor-grab",
+        !isReadOnly && "hover:z-10"
       )}
       style={{ 
-        x, 
-        y,
+        x: motionX, 
+        y: motionY,
         rotate: rotation,
-        transformOrigin: 'top left'
+        transformOrigin: 'top left',
+        willChange: 'transform'
       }}
       onClick={handleClick}
       onDragStart={() => setIsDragging(true)}
       onDragEnd={(_, info) => {
         setIsDragging(false);
         if (isReadOnly) return;
-        if (type === "image" && !isSelected) return;
         const container = document.getElementById('canvas-inner');
         if (container) {
           const rect = container.getBoundingClientRect();
           const canvasScaleVal = rect.width / 900;
-          // Calculate raw position
-          let newX = (info.point.x - rect.left) / canvasScaleVal;
-          let newY = (info.point.y - rect.top) / canvasScaleVal;
-          // Clamp to letter boundaries (24px inset from edges)
-          const minX = 24;
-          const minY = 24;
-          const maxX = 900 - 48; // Leave room for element
-          const maxY = 643 - 48;
-          newX = Math.max(minX, Math.min(maxX, newX));
-          newY = Math.max(minY, Math.min(maxY, newY));
+          // Calculate position - allow free placement anywhere on canvas
+          const newX = (info.point.x - rect.left) / canvasScaleVal;
+          const newY = (info.point.y - rect.top) / canvasScaleVal;
           onUpdate(id, { x: newX, y: newY });
         }
       }}
@@ -312,7 +317,7 @@ const DraggableElement = ({ id, x, y, rotation, scale, type, content, style, onU
       )}
     </motion.div>
   );
-};
+});
 
 interface StudioCanvasProps {
   background: string;

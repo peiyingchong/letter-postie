@@ -281,8 +281,44 @@ export default function Studio() {
               <div className="h-px bg-border w-full" />
               
               <label className="block text-xs font-mono uppercase text-muted-foreground tracking-wider">Images</label>
+              <input 
+                type="file"
+                accept="image/*"
+                id="image-upload"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file && file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                      const url = event.target?.result as string;
+                      setLetterState(prev => ({
+                        ...prev,
+                        content: {
+                          ...prev.content,
+                          images: [
+                            ...prev.content.images,
+                            { 
+                              id: Math.random().toString(36).substr(2, 9), 
+                              url, 
+                              x: 150, 
+                              y: 150, 
+                              rotation: 0, 
+                              scale: 1 
+                            }
+                          ] as any[]
+                        }
+                      }));
+                    };
+                    reader.readAsDataURL(file);
+                  }
+                  e.target.value = '';
+                }}
+                data-testid="input-image-upload"
+              />
               <div 
-                className="w-full py-8 border-2 border-dashed border-border rounded-xl text-muted-foreground flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-muted/30"
+                className="w-full py-8 border-2 border-dashed border-border rounded-xl text-muted-foreground flex flex-col items-center justify-center gap-2 cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => document.getElementById('image-upload')?.click()}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   e.preventDefault();
@@ -300,8 +336,8 @@ export default function Studio() {
                             { 
                               id: Math.random().toString(36).substr(2, 9), 
                               url, 
-                              x: 50, 
-                              y: 50, 
+                              x: 150, 
+                              y: 150, 
                               rotation: 0, 
                               scale: 1 
                             }
@@ -315,7 +351,7 @@ export default function Studio() {
                 data-testid="dropzone-image"
               >
                 <Palette size={24} />
-                <span className="text-sm">Drop image here to add</span>
+                <span className="text-sm">Click or drop image to add</span>
               </div>
             </div>
           )}
