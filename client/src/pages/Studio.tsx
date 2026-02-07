@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -11,8 +12,11 @@ import {
   Lock,
   Star,
   Check,
-  RotateCcw
+  RotateCcw,
+  Minus,
+  Plus
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { useCreateLetter } from "@/hooks/use-letters";
 import { useToast } from "@/hooks/use-toast";
 import { StudioCanvas } from "@/components/StudioCanvas";
@@ -279,6 +283,41 @@ export default function Studio() {
                   <Type size={18} /> Add Text Block
                 </button>
               </div>
+
+              {/* Font size controls for each text element */}
+              {letterState.content.textElements.length > 0 && (
+                <div className="space-y-2">
+                  <label className="block text-xs font-mono uppercase text-muted-foreground tracking-wider">Font Size</label>
+                  {letterState.content.textElements.map((el, idx) => (
+                    <div 
+                      key={el.id} 
+                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/40 border border-border/50"
+                      data-testid={`text-font-control-${idx}`}
+                    >
+                      <span className={cn("text-xs truncate flex-1 text-muted-foreground", el.font)}>{el.text || "Empty"}</span>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => handleUpdateElement('text', el.id, { fontSize: Math.max(8, (el.fontSize || 18) - 2) })}
+                          className="w-6 h-6"
+                          data-testid={`button-font-decrease-${idx}`}
+                        ><Minus size={12} /></Button>
+                        <span className="text-xs font-mono w-7 text-center text-foreground" data-testid={`text-font-size-${idx}`}>
+                          {el.fontSize || 18}
+                        </span>
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          onClick={() => handleUpdateElement('text', el.id, { fontSize: Math.min(72, (el.fontSize || 18) + 2) })}
+                          className="w-6 h-6"
+                          data-testid={`button-font-increase-${idx}`}
+                        ><Plus size={12} /></Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
               
               <div className="h-px bg-border w-full" />
               

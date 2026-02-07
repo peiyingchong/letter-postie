@@ -1,7 +1,7 @@
 import { useRef, useState, useCallback, useEffect, memo } from "react";
 import { motion, useMotionValue } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { RotateCw } from "lucide-react";
+import { RotateCw, X, Minus, Plus } from "lucide-react";
 
 interface ElementProps {
   id: string;
@@ -119,7 +119,7 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     window.addEventListener('pointercancel', handleCancel);
   }, [id, x, y, canvasScale, isReadOnly, isResizing, isRotating, isEditing, motionX, motionY, onUpdate]);
 
-  // Text box resize handler - adjusts width/height with auto-scaling font
+  // Text box resize handler - width only, height auto-hugs content
   const handleTextResizeStart = useCallback((e: React.PointerEvent) => {
     if (isReadOnly) return;
     e.stopPropagation();
@@ -127,16 +127,12 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     setIsResizing(true);
     
     const startPointerX = e.clientX;
-    const startPointerY = e.clientY;
     const startWidth = style?.width || 180;
-    const startHeight = style?.height || 40;
     
     const handleMove = (moveEvent: PointerEvent) => {
       const dx = (moveEvent.clientX - startPointerX) / canvasScale;
-      const dy = (moveEvent.clientY - startPointerY) / canvasScale;
       const newWidth = Math.max(60, startWidth + dx);
-      const newHeight = Math.max(24, startHeight + dy);
-      onUpdate(id, { width: newWidth, height: newHeight });
+      onUpdate(id, { width: newWidth });
     };
     
     const handleUp = () => {
@@ -147,7 +143,7 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
-  }, [id, style?.width, style?.height, canvasScale, onUpdate, isReadOnly]);
+  }, [id, style?.width, canvasScale, onUpdate, isReadOnly]);
 
   const handleResizeStart = useCallback((e: React.PointerEvent) => {
     if (isReadOnly) return;
@@ -225,10 +221,9 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     }
   }, [type, isReadOnly]);
 
-  // Text box dimensions
+  // Text box dimensions - width controlled, height auto-hugs content
   const textWidth = style?.width || 180;
-  const textHeight = style?.height || 40;
-  const autoFontSize = Math.max(10, Math.min(120, textHeight * 0.6));
+  const textFontSize = style?.fontSize || 18;
 
   return (
     <motion.div
@@ -254,15 +249,15 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
       {type === "text" && (
         <div 
           className="relative group"
-          style={{ width: textWidth, height: textHeight }}
+          style={{ width: textWidth }}
         >
-          {/* Text container with auto-scaling font */}
+          {/* Text container - width controlled, height hugs content */}
           <div
             ref={textRef}
             contentEditable={isEditing}
             suppressContentEditableWarning
             className={cn(
-              "w-full h-full overflow-hidden rounded px-2 flex items-center",
+              "w-full rounded px-2 py-1",
               style?.font || "font-hand",
               isEditing
                 ? "outline-none ring-2 ring-primary/40 bg-white/60 cursor-text"
@@ -271,8 +266,10 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
             )}
             style={{ 
               color: style?.color || "#334155", 
-              fontSize: autoFontSize,
-              lineHeight: 1.2,
+              fontSize: textFontSize,
+              lineHeight: 1.4,
+              overflowWrap: 'break-word',
+              whiteSpace: 'normal',
               wordBreak: 'break-word'
             }}
             onBlur={(e) => {
@@ -294,17 +291,17 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
             {content}
           </div>
 
-          {/* Resize handle - bottom right */}
+          {/* Right edge resize handle */}
           {!isReadOnly && (
             <div
               onPointerDown={handleTextResizeStart}
               className={cn(
-                "absolute -bottom-1.5 -right-1.5 w-4 h-4 cursor-se-resize z-10 flex items-center justify-center rounded-sm opacity-0 group-hover:opacity-100 transition-opacity",
+                "absolute top-0 -right-2 w-3 h-full cursor-ew-resize z-10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity",
                 isResizing && "opacity-100"
               )}
               data-testid="handle-resize-text"
             >
-              <div className="w-2.5 h-2.5 border-r-2 border-b-2 border-primary/60" />
+              <div className="w-0.5 h-6 rounded-full bg-primary/40" />
             </div>
           )}
 
@@ -315,10 +312,10 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
                 e.stopPropagation();
                 onRemove(id);
               }}
-              className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
+              className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
               data-testid="button-remove-text"
             >
-              ×
+              <X size={10} />
             </button>
           )}
 
@@ -358,10 +355,10 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
             <>
               <button 
                 onClick={() => onRemove(id)}
-                className="absolute -top-3 -right-3 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
+                className="absolute -top-3 -right-3 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
                 data-testid="button-remove-sticker"
               >
-                ×
+                <X size={10} />
               </button>
               
               <div 
@@ -431,10 +428,10 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
                   e.stopPropagation();
                   onRemove(id);
                 }}
-                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center text-sm shadow-md z-10 hover:bg-red-600 transition-colors"
+                className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md z-10 hover:bg-red-600 transition-colors"
                 data-testid="button-remove-image"
               >
-                ×
+                <X size={12} />
               </button>
               
               {/* Resize handle */}
