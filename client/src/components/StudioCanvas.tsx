@@ -21,9 +21,11 @@ interface ElementProps {
 
 const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style, onUpdate, onRemove, isReadOnly, isSelected, onSelect, canvasScale = 1 }: ElementProps & { canvasScale?: number }) => {
   const elementRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
   const [isResizing, setIsResizing] = useState(false);
   const [isRotating, setIsRotating] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   
   // Use motion values for smooth drag without re-renders
   const motionX = useMotionValue(x);
@@ -35,13 +37,40 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     motionY.set(y);
   }, [x, y, motionX, motionY]);
 
+  // Focus text area when entering edit mode
+  useEffect(() => {
+    if (isEditing && textRef.current) {
+      textRef.current.focus();
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(textRef.current);
+      range.collapse(false);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    }
+  }, [isEditing]);
+
+  // Click outside to exit edit mode
+  useEffect(() => {
+    if (!isEditing) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (elementRef.current && !elementRef.current.contains(e.target as Node)) {
+        setIsEditing(false);
+        if (textRef.current) {
+          onUpdate(id, { text: textRef.current.textContent || "" });
+        }
+      }
+    };
+    window.addEventListener('pointerdown', handleClickOutside);
+    return () => window.removeEventListener('pointerdown', handleClickOutside);
+  }, [isEditing, id, onUpdate]);
+
   // Manual drag handling with scale compensation and pointer capture
   const handleDragStart = useCallback((e: React.PointerEvent) => {
-    if (isReadOnly || isResizing || isRotating) return;
+    if (isReadOnly || isResizing || isRotating || isEditing) return;
     e.stopPropagation();
     setIsDragging(true);
     
-    // Capture pointer for reliable tracking even outside element/window
     const element = elementRef.current;
     if (element) {
       element.setPointerCapture(e.pointerId);
@@ -54,8 +83,6 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     const startY = y;
     
     const handleMove = (moveEvent: PointerEvent) => {
-      // Calculate delta in screen pixels, then divide by canvas scale
-      // to get proper movement in canvas coordinate space
       const dx = (moveEvent.clientX - startPointerX) / canvasScale;
       const dy = (moveEvent.clientY - startPointerY) / canvasScale;
       
@@ -74,7 +101,6 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     };
     
     const handleUp = (upEvent: PointerEvent) => {
-      // Calculate final position
       const dx = (upEvent.clientX - startPointerX) / canvasScale;
       const dy = (upEvent.clientY - startPointerY) / canvasScale;
       
@@ -83,7 +109,6 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     };
     
     const handleCancel = () => {
-      // Reset to original position on cancel
       motionX.set(startX);
       motionY.set(startY);
       cleanup();
@@ -92,7 +117,37 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     window.addEventListener('pointermove', handleMove);
     window.addEventListener('pointerup', handleUp);
     window.addEventListener('pointercancel', handleCancel);
-  }, [id, x, y, canvasScale, isReadOnly, isResizing, isRotating, motionX, motionY, onUpdate]);
+  }, [id, x, y, canvasScale, isReadOnly, isResizing, isRotating, isEditing, motionX, motionY, onUpdate]);
+
+  // Text box resize handler - adjusts width/height with auto-scaling font
+  const handleTextResizeStart = useCallback((e: React.PointerEvent) => {
+    if (isReadOnly) return;
+    e.stopPropagation();
+    e.preventDefault();
+    setIsResizing(true);
+    
+    const startPointerX = e.clientX;
+    const startPointerY = e.clientY;
+    const startWidth = style?.width || 180;
+    const startHeight = style?.height || 40;
+    
+    const handleMove = (moveEvent: PointerEvent) => {
+      const dx = (moveEvent.clientX - startPointerX) / canvasScale;
+      const dy = (moveEvent.clientY - startPointerY) / canvasScale;
+      const newWidth = Math.max(60, startWidth + dx);
+      const newHeight = Math.max(24, startHeight + dy);
+      onUpdate(id, { width: newWidth, height: newHeight });
+    };
+    
+    const handleUp = () => {
+      setIsResizing(false);
+      window.removeEventListener('pointermove', handleMove);
+      window.removeEventListener('pointerup', handleUp);
+    };
+    
+    window.addEventListener('pointermove', handleMove);
+    window.addEventListener('pointerup', handleUp);
+  }, [id, style?.width, style?.height, canvasScale, onUpdate, isReadOnly]);
 
   const handleResizeStart = useCallback((e: React.PointerEvent) => {
     if (isReadOnly) return;
@@ -163,13 +218,25 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
     }
   };
 
+  const handleDoubleClick = useCallback((e: React.MouseEvent) => {
+    if (type === "text" && !isReadOnly) {
+      e.stopPropagation();
+      setIsEditing(true);
+    }
+  }, [type, isReadOnly]);
+
+  // Text box dimensions
+  const textWidth = style?.width || 180;
+  const textHeight = style?.height || 40;
+  const autoFontSize = Math.max(10, Math.min(120, textHeight * 0.6));
+
   return (
     <motion.div
       ref={elementRef}
       initial={{ x, y }}
       className={cn(
         "absolute touch-none select-none",
-        !isReadOnly && !isResizing && !isRotating && "cursor-grab",
+        !isReadOnly && !isResizing && !isRotating && !isEditing && "cursor-grab",
         isDragging && "cursor-grabbing",
         !isReadOnly && "hover:z-10"
       )}
@@ -181,27 +248,85 @@ const DraggableElement = memo(({ id, x, y, rotation, scale, type, content, style
         willChange: 'transform'
       }}
       onClick={handleClick}
+      onDoubleClick={handleDoubleClick}
       onPointerDown={handleDragStart}
     >
       {type === "text" && (
-        <div className="relative group">
-          <div 
-            contentEditable={!isReadOnly}
+        <div 
+          className="relative group"
+          style={{ width: textWidth, height: textHeight }}
+        >
+          {/* Text container with auto-scaling font */}
+          <div
+            ref={textRef}
+            contentEditable={isEditing}
             suppressContentEditableWarning
-            className={cn("px-2 py-1 min-w-[100px] outline-none rounded", !isReadOnly && "focus:ring-2 ring-primary/20", style?.font || "font-hand")} 
-            style={{ color: style?.color, fontSize: (style?.fontSize || 24) * scale }}
-            onBlur={(e) => !isReadOnly && onUpdate(id, { text: e.currentTarget.textContent })}
+            className={cn(
+              "w-full h-full overflow-hidden rounded px-2 flex items-center",
+              style?.font || "font-hand",
+              isEditing
+                ? "outline-none ring-2 ring-primary/40 bg-white/60 cursor-text"
+                : "cursor-grab",
+              !isEditing && !isReadOnly && "border border-transparent group-hover:border-primary/20"
+            )}
+            style={{ 
+              color: style?.color || "#334155", 
+              fontSize: autoFontSize,
+              lineHeight: 1.2,
+              wordBreak: 'break-word'
+            }}
+            onBlur={(e) => {
+              if (!isReadOnly && isEditing) {
+                onUpdate(id, { text: e.currentTarget.textContent || "" });
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') {
+                setIsEditing(false);
+                if (textRef.current) {
+                  onUpdate(id, { text: textRef.current.textContent || "" });
+                }
+              }
+              e.stopPropagation();
+            }}
+            data-testid="text-content-box"
           >
             {content}
           </div>
+
+          {/* Resize handle - bottom right */}
+          {!isReadOnly && (
+            <div
+              onPointerDown={handleTextResizeStart}
+              className={cn(
+                "absolute -bottom-1.5 -right-1.5 w-4 h-4 cursor-se-resize z-10 flex items-center justify-center rounded-sm opacity-0 group-hover:opacity-100 transition-opacity",
+                isResizing && "opacity-100"
+              )}
+              data-testid="handle-resize-text"
+            >
+              <div className="w-2.5 h-2.5 border-r-2 border-b-2 border-primary/60" />
+            </div>
+          )}
+
+          {/* Remove button */}
           {!isReadOnly && (
             <button 
-              onClick={() => onRemove(id)}
-              className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemove(id);
+              }}
+              className="absolute -top-2 -right-2 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow-sm z-10"
               data-testid="button-remove-text"
             >
               ×
             </button>
+          )}
+
+          {/* Double-click hint */}
+          {!isReadOnly && !isEditing && (
+            <div className="absolute -bottom-5 left-0 text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              Double-click to edit
+            </div>
           )}
         </div>
       )}
@@ -467,7 +592,7 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
               content={el.text} 
               isReadOnly={isReadOnly}
               canvasScale={canvasScale}
-              style={{ font: el.font, color: el.color, fontSize: el.fontSize }}
+              style={{ font: el.font, color: el.color, fontSize: el.fontSize, width: el.width, height: el.height }}
               onUpdate={(id, data) => onUpdateElement('text', id, data)} 
               onRemove={(id) => handleRemove('text', id)}
             />
