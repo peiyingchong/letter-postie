@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link } from "react-router-dom";
 import { AlertTriangle } from "lucide-react";
 
 export default function NotFound() {
@@ -12,7 +12,7 @@ export default function NotFound() {
         <p className="text-muted-foreground mb-6">
           The page you are looking for does not exist or has been moved.
         </p>
-        <Link href="/" className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors w-full">
+        <Link to="/" className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground shadow-lg hover:bg-primary/90 transition-colors w-full">
           Return Home
         </Link>
       </div>

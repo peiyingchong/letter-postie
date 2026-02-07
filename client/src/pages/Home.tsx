@@ -1,4 +1,4 @@
-import { Link } from "wouter";
+import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles, PenTool, Mail, Heart, Star, Gift, Cake, PartyPopper, Trophy, Music, Flower2 } from "lucide-react";
 import { Navigation } from "@/components/Navigation";
@@ -51,7 +51,6 @@ export default function Home() {
     <div className="min-h-screen bg-background font-sans selection:bg-primary/10">
       <Navigation />
       
-      {/* Hero Section */}
       <section className="relative pt-32 pb-20 px-6 overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,var(--secondary)_0%,transparent_40%)] -z-10" />
         
@@ -86,7 +85,7 @@ export default function Home() {
             transition={{ delay: 0.5, duration: 0.8 }}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4"
           >
-            <Link href="/studio">
+            <Link to="/studio">
               <button className="px-8 py-4 rounded-full bg-primary text-primary-foreground font-medium text-lg shadow-xl shadow-primary/20 hover:shadow-2xl hover:shadow-primary/30 hover:-translate-y-1 transition-all duration-300 flex items-center gap-2 group" data-testid="button-start-letter">
                 Start a Letter
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -100,7 +99,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Feature Preview Cards */}
       <section className="py-24 px-6 bg-white/50">
         <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
           {[
@@ -116,8 +114,8 @@ export default function Home() {
             },
             {
               icon: <Sparkles className="w-6 h-6" />,
-              title: "Keep Forever",
-              desc: "Letters are stored permanently. A digital shoebox of memories."
+              title: "Share Instantly",
+              desc: "Your letter is encoded in the URL. No accounts needed."
             }
           ].map((item, i) => (
             <motion.div
@@ -138,7 +136,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Gallery Section */}
       <section id="gallery" className="py-24 px-6 bg-gradient-to-b from-white/50 to-secondary/10">
         <div className="max-w-6xl mx-auto">
           <motion.div
@@ -169,18 +166,14 @@ export default function Home() {
                 className="group cursor-pointer"
                 data-testid={`gallery-item-${letter.id}`}
               >
-                {/* Letter preview card */}
                 <div className={`${letter.background} rounded-lg aspect-[7/5] relative overflow-hidden shadow-md group-hover:shadow-xl transition-all duration-300 group-hover:-translate-y-1`}>
-                  {/* Dotted border */}
                   <div className="absolute inset-3 border-2 border-dashed border-black/10 rounded pointer-events-none" />
                   
-                  {/* Stamp */}
                   <div className="absolute top-2 right-2 w-10 h-12 bg-white/80 rounded-sm border border-primary/20 flex flex-col items-center justify-center shadow-sm">
                     <div className="text-[5px] font-serif uppercase tracking-wider text-primary/60">Postie</div>
                     <div className="text-xs font-serif text-primary/40 italic">P</div>
                   </div>
                   
-                  {/* Content preview */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center p-6">
                     <div className="mb-2">{letter.icon}</div>
                     <div className="font-hand text-lg text-center text-gray-700 mb-1">
@@ -191,7 +184,6 @@ export default function Home() {
                     </div>
                   </div>
                   
-                  {/* Decorative icons instead of emoji stickers */}
                   <div className="absolute bottom-2 left-2 flex gap-1">
                     {letter.decorIcons.map((Icon, si) => (
                       <div 
@@ -207,7 +199,6 @@ export default function Home() {
                   </div>
                 </div>
                 
-                {/* Title */}
                 <div className="mt-3 text-center">
                   <h4 className="font-serif font-medium text-primary">{letter.title}</h4>
                   <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{letter.preview}</p>
@@ -216,14 +207,13 @@ export default function Home() {
             ))}
           </div>
 
-          {/* CTA */}
           <motion.div
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
             className="text-center mt-12"
           >
-            <Link href="/studio">
+            <Link to="/studio">
               <button className="px-6 py-3 rounded-full bg-primary text-primary-foreground font-medium shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all duration-300 flex items-center gap-2 mx-auto group" data-testid="button-create-yours">
                 Create Yours
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
@@ -233,13 +223,12 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer / Ad Placeholder */}
       <footer className="py-12 border-t border-border mt-12">
         <div className="max-w-4xl mx-auto text-center px-6">
           <div className="w-full h-32 bg-muted/30 rounded-xl flex items-center justify-center border border-dashed border-border mb-8">
             <span className="text-muted-foreground font-mono text-sm">Advertisement Space</span>
           </div>
-          <p className="text-muted-foreground font-serif italic">© 2026 Postie. Crafted with care.</p>
+          <p className="text-muted-foreground font-serif italic">Postie. Crafted with care.</p>
         </div>
       </footer>
     </div>
