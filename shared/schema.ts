@@ -16,6 +16,8 @@ export const letters = pgTable("letters", {
       font: string;
       color: string;
       fontSize: number;
+      width?: number;
+      height?: number;
     }[];
     images: {
       id: string;

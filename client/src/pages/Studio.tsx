@@ -66,7 +66,9 @@ export default function Studio() {
             color: "#334155", 
             fontSize: 18,
             rotation: 0, 
-            scale: 1
+            scale: 1,
+            width: 180,
+            height: 40
           }
         ]
       }
