@@ -558,14 +558,14 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
     }
   };
 
-  const handleRemove = (type: string, id: string) => {
+  const handleRemove = useCallback((type: string, id: string) => {
     if (onRemoveElement) {
       onRemoveElement(type, id);
     }
     if (id === activeElementId) {
       setActiveElementId(null);
     }
-  };
+  }, [onRemoveElement, activeElementId]);
 
   const handleSelect = useCallback((id: string) => {
     setActiveElementId(id);
@@ -579,6 +579,29 @@ export function StudioCanvas({ background, content, onUpdateElement, onRemoveEle
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!activeElementId || isReadOnly) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        const editable = (e.target as HTMLElement)?.isContentEditable;
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || editable) return;
+
+        e.preventDefault();
+        const textEl = content.textElements.find((el: any) => el.id === activeElementId);
+        if (textEl) { handleRemove('text', activeElementId); return; }
+        const stickerEl = content.stickers.find((el: any) => el.id === activeElementId);
+        if (stickerEl) { handleRemove('sticker', activeElementId); return; }
+        const imageEl = content.images?.find((el: any) => el.id === activeElementId);
+        if (imageEl) { handleRemove('image', activeElementId); return; }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeElementId, isReadOnly, content, handleRemove]);
 
   return (
     <div 
